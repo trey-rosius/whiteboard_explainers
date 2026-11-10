@@ -1,0 +1,367 @@
+{
+ "id": "mixed-short",
+ "title": "Why Big Websites Load Fast",
+ "format": "9:16",
+ "theme": "educloud",
+ "voice": {
+  "provider": "elevenlabs"
+ },
+ "targetSeconds": 45,
+ "pronounce": {
+  "CDN": "C D N"
+ },
+ "scenes": [
+  {
+   "id": "intro",
+   "kind": "title",
+   "kicker": "Web basics",
+   "title": "Why Big Websites Load Fast",
+   "icon": "lucide:globe",
+   "narration": "Why big websites load fast. It comes down to distance."
+  },
+  {
+   "id": "far",
+   "kind": "board",
+   "narration": "Your {user} visitor is in Lagos, but your {server} server is in Virginia. {trip} Every request crosses an ocean and comes back.",
+   "elements": [
+    {
+     "id": "user",
+     "type": "client",
+     "variant": "phone",
+     "label": "Lagos",
+     "at": [
+      3,
+      1.3
+     ],
+     "size": "l"
+    },
+    {
+     "id": "server",
+     "type": "server",
+     "label": "Virginia",
+     "at": [
+      3,
+      5.2
+     ],
+     "size": "l"
+    },
+    {
+     "id": "long",
+     "type": "arrow",
+     "from": "user",
+     "to": "server",
+     "both": true,
+     "label": "ocean"
+    }
+   ],
+   "steps": [
+    {
+     "at": "user",
+     "do": "show",
+     "targets": [
+      "user"
+     ]
+    },
+    {
+     "at": "server",
+     "do": "show",
+     "targets": [
+      "server",
+      "long"
+     ]
+    },
+    {
+     "at": "trip",
+     "do": "flow",
+     "path": [
+      "long"
+     ],
+     "color": "yellow",
+     "speed": "slow"
+    },
+    {
+     "at": "trip+1.6",
+     "do": "flow",
+     "path": [
+      "long"
+     ],
+     "color": "yellow",
+     "reverse": true,
+     "speed": "slow"
+    }
+   ]
+  },
+  {
+   "id": "line",
+   "kind": "board",
+   "narration": "{line} Distance is delay.",
+   "elements": [
+    {
+     "id": "big-line",
+     "type": "text",
+     "text": "Distance is delay",
+     "style": "headline",
+     "color": "yellow",
+     "at": [
+      3,
+      8.7
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "at": "line",
+     "do": "dim",
+     "targets": [
+      "user",
+      "server",
+      "long"
+     ]
+    },
+    {
+     "at": "line",
+     "do": "show",
+     "targets": [
+      "big-line"
+     ]
+    }
+   ],
+   "continue": true
+  },
+  {
+   "id": "fix",
+   "kind": "board",
+   "heading": "The fix: a CDN",
+   "narration": "A CDN {edge} keeps copies of your files close to your visitors. Now {hit} the request stops nearby, and {skip} never needs the far server.",
+   "elements": [
+    {
+     "id": "user2",
+     "type": "client",
+     "variant": "phone",
+     "label": "Lagos",
+     "at": [
+      1.5,
+      1.8
+     ]
+    },
+    {
+     "id": "edge",
+     "type": "server",
+     "label": "CDN in Lagos",
+     "color": "green",
+     "at": [
+      4.5,
+      1.8
+     ]
+    },
+    {
+     "id": "origin",
+     "type": "server",
+     "label": "Virginia",
+     "color": "gray",
+     "at": [
+      3,
+      7
+     ]
+    },
+    {
+     "id": "near",
+     "type": "arrow",
+     "from": "user2",
+     "to": "edge",
+     "both": true
+    },
+    {
+     "id": "copy",
+     "type": "arrow",
+     "from": "edge",
+     "to": "origin",
+     "style": "dashed",
+     "color": "gray"
+    }
+   ],
+   "steps": [
+    {
+     "at": "start",
+     "do": "show",
+     "targets": [
+      "user2"
+     ]
+    },
+    {
+     "at": "edge",
+     "do": "show",
+     "targets": [
+      "edge",
+      "origin",
+      "copy"
+     ]
+    },
+    {
+     "at": "hit",
+     "do": "show",
+     "targets": [
+      "near"
+     ]
+    },
+    {
+     "at": "hit+0.2",
+     "do": "flow",
+     "path": [
+      "near"
+     ],
+     "color": "green"
+    },
+    {
+     "at": "skip",
+     "do": "dim",
+     "targets": [
+      "origin",
+      "copy"
+     ]
+    },
+    {
+     "at": "skip",
+     "do": "mark",
+     "target": "edge",
+     "kind": "check"
+    }
+   ]
+  },
+  {
+   "id": "what",
+   "kind": "board",
+   "heading": "What it serves",
+   "narration": "It's best at files that rarely change: {images} images, {scripts} scripts, and {video} video.",
+   "elements": [
+    {
+     "id": "items",
+     "type": "list",
+     "items": [
+      "Images",
+      "Scripts",
+      "Video"
+     ],
+     "stepwise": true,
+     "size": "l",
+     "at": [
+      3,
+      4.5
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "at": "start",
+     "do": "show",
+     "targets": [
+      "items"
+     ]
+    },
+    {
+     "at": "images",
+     "do": "reveal",
+     "target": "items"
+    },
+    {
+     "at": "scripts",
+     "do": "reveal",
+     "target": "items"
+    },
+    {
+     "at": "video",
+     "do": "reveal",
+     "target": "items"
+    }
+   ]
+  },
+  {
+   "id": "gain",
+   "kind": "board",
+   "narration": "Say a page takes {before} two seconds from far away. From nearby, {after} it could take half a second.",
+   "elements": [
+    {
+     "id": "time",
+     "type": "bars",
+     "title": "Load time",
+     "unit": "s",
+     "max": 2,
+     "bars": [
+      {
+       "label": "Far",
+       "value": 2
+      },
+      {
+       "label": "Nearby",
+       "value": 0.5
+      }
+     ],
+     "size": "l",
+     "at": [
+      3,
+      3.4
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "at": "before",
+     "do": "show",
+     "targets": [
+      "time"
+     ]
+    },
+    {
+     "at": "before",
+     "do": "highlight",
+     "target": "time",
+     "row": 0,
+     "color": "red",
+     "for": 2
+    },
+    {
+     "at": "after",
+     "do": "highlight",
+     "target": "time",
+     "row": 1,
+     "color": "green"
+    }
+   ]
+  },
+  {
+   "id": "close",
+   "kind": "board",
+   "narration": "{end} Move your files closer, and everything feels faster.",
+   "elements": [
+    {
+     "id": "last",
+     "type": "text",
+     "text": "Closer files, faster site",
+     "style": "headline",
+     "color": "green",
+     "at": [
+      3,
+      8
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "at": "end",
+     "do": "dim",
+     "targets": [
+      "time"
+     ]
+    },
+    {
+     "at": "end",
+     "do": "show",
+     "targets": [
+      "last"
+     ]
+    }
+   ],
+   "continue": true
+  }
+ ]
+}

@@ -1,0 +1,22 @@
+[
+  {
+    "topic": "FinOps: why cloud cost is now an engineering metric",
+    "brief": "Evergreen concept explainer, ~36s short. Explain FinOps: engineers see cost per service/request alongside latency and errors, tag resources, set budgets and alerts, rightsize, and shut down idle resources. Industry trend pieces for 2026 describe cloud cost as an engineering metric rather than only a finance concern. Do not invent statistics, company names or dollar figures."
+  },
+  {
+    "topic": "Why r/opensource banned AI-made projects",
+    "brief": "News hook (week of Nov 1 2026, per Help Net Security): the r/opensource forum now bars projects that use AI, are made by AI, or are intended for AI. Separately, maintainers of large open-source projects estimate about a third of incoming pull requests are low quality or AI-generated. Explain the maintainer review burden: a PR is cheap to generate but expensive to review, so maintainers' queues fill up. Use only these facts; do not invent quotes, numbers or project names."
+  },
+  {
+    "topic": "Immutable operating systems explained",
+    "brief": "News hook (week of Nov 1 2026, per Help Net Security): Canonical is restarting Ubuntu Core Desktop, an immutable, attestable edition it intends to become the default Ubuntu desktop. A project called Amutable Foundations ships a Linux system with no SSH and no package manager, where each machine sends signed reports of its software and configuration. Explain the concept: a read-only base image, atomic updates and rollback, and attestation (the machine proves what it runs). Use only these facts; no invented versions or dates."
+  },
+  {
+    "topic": "GitHub's npm package firewall",
+    "brief": "News hook (week of Nov 1 2026, per Help Net Security): GitHub launched a firewall that screens npm packages against policy before install, blocking malware, packages with critical vulnerabilities, and brand-new versions (a cooldown so fresh, possibly hijacked releases aren't pulled immediately). Explain the supply-chain attack it stops: a compromised maintainer publishes a malicious version and every CI install fetches it within minutes. Use only these facts; do not invent configuration syntax or numbers."
+  },
+  {
+    "topic": "Faster attention kernels: Yandex FLAMIA on Nvidia Blackwell",
+    "brief": "News hook (Nov 2026, per AI Weekly): Yandex open-sourced FLAMIA, attention kernels for Nvidia Blackwell GPUs that reportedly speed up the training backward pass about 2x with little impact on loss. Explain why attention needs custom kernels: memory traffic between HBM and on-chip SRAM is the bottleneck, so tiling and fusing operations (the FlashAttention idea) keep data on-chip. Keep claims about FLAMIA to these facts only."
+  }
+]

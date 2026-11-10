@@ -1,0 +1,28 @@
+{
+  "id": "still-route",
+  "title": "Still route",
+  "format": "16:9",
+  "theme": "blueprint",
+  "scenes": [
+    { "id": "intro", "kind": "title", "title": "Still route", "narration": "Still route." },
+    {
+      "id": "route",
+      "kind": "board",
+      "narration": "{src} Tickets go into an SQS queue, {q} which triggers a Lambda function. {cost} It cost about twenty-two thousand dollars for every million tickets.",
+      "elements": [
+        { "id": "src", "type": "client", "variant": "user", "label": "Staff", "at": [1.5, 3] },
+        { "id": "q", "type": "queue", "label": "Tickets", "items": ["T1", "T2", "T3"], "at": [5, 3] },
+        { "id": "fn", "type": "node", "icon": "aws:lambda", "label": "Routing", "at": [9.5, 3] },
+        { "id": "in", "type": "arrow", "from": "src", "to": "q" },
+        { "id": "qf", "type": "arrow", "from": "q", "to": "fn" },
+        { "id": "cost-chip", "type": "chip", "text": "$22k / million", "at": [6, 5.2] }
+      ],
+      "steps": [
+        { "at": "src", "do": "show", "targets": ["src", "q", "in", "fn", "qf"] },
+        { "at": "q", "do": "flow", "path": ["qf"], "label": "ticket" },
+        { "at": "cost", "do": "show", "targets": ["cost-chip"] },
+        { "at": "cost+0.5", "do": "hide", "targets": ["cost-chip"] }
+      ]
+    }
+  ]
+}

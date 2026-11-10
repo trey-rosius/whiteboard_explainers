@@ -1,0 +1,30 @@
+# dependencies and build output
+node_modules/
+dist/
+out/
+cdk.out/
+build-temp/
+*.tsbuildinfo
+*.log
+
+# secrets and local environment
+.env
+.env.*
+!.env.example
+.claude/settings.local.json
+.bb-data/
+.blocks/
+.blocks-sandbox/
+.hosting/
+
+# old stack backups and rendered media
+archive/
+explainer/public/videos/
+*.mp4
+*.mov
+*.webm
+*.wav
+*.mp3
+/test_still*.png
+
+.DS_Store

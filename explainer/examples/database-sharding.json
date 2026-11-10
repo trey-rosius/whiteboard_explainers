@@ -1,0 +1,737 @@
+{
+  "id": "database-sharding",
+  "title": "Database Sharding Explained",
+  "format": "16:9",
+  "theme": "chalkboard",
+  "voice": {
+    "provider": "elevenlabs"
+  },
+  "pronounce": {
+    "Postgres": "post-gress"
+  },
+  "scenes": [
+    {
+      "id": "intro",
+      "kind": "title",
+      "kicker": "System Design 101",
+      "title": "Database Sharding",
+      "subtitle": "How one database becomes many, without losing a single row",
+      "narration": "Your app just went viral. So how do the biggest systems keep their databases from melting down?"
+    },
+    {
+      "id": "one-db",
+      "kind": "board",
+      "heading": "One database, one problem",
+      "narration": "Picture a photo app {users} where every request goes to one app server {app} and one database {db}, holding every user, photo, and like. At first, life is good {good}. A request comes in {req}, and the answer comes back fast {fast}. Then the app goes viral {viral}. Traffic jumps ten times {surge}, and that single database starts to choke {choke}. Every query now waits in line {wait}.",
+      "elements": [
+        {
+          "id": "users",
+          "type": "client",
+          "variant": "user",
+          "label": "Users",
+          "at": [
+            1.6,
+            3
+          ]
+        },
+        {
+          "id": "app",
+          "type": "server",
+          "label": "App server",
+          "at": [
+            6,
+            3
+          ]
+        },
+        {
+          "id": "db",
+          "type": "db",
+          "label": "Postgres",
+          "sub": "1 TB · 1 node",
+          "at": [
+            10.3,
+            3
+          ]
+        },
+        {
+          "id": "a1",
+          "type": "arrow",
+          "from": "users",
+          "to": "app",
+          "label": "requests"
+        },
+        {
+          "id": "a2",
+          "type": "arrow",
+          "from": "app",
+          "to": "db",
+          "label": "SQL"
+        }
+      ],
+      "steps": [
+        {
+          "at": "users",
+          "do": "show",
+          "targets": [
+            "users"
+          ]
+        },
+        {
+          "at": "app",
+          "do": "show",
+          "targets": [
+            "app",
+            "a1"
+          ]
+        },
+        {
+          "at": "db",
+          "do": "show",
+          "targets": [
+            "db",
+            "a2"
+          ]
+        },
+        {
+          "at": "db+0.3",
+          "do": "flow",
+          "path": [
+            "a1",
+            "a2"
+          ],
+          "count": 3,
+          "label": "request"
+        },
+        {
+          "at": "good",
+          "do": "mark",
+          "target": "db",
+          "kind": "check"
+        },
+        {
+          "at": "req",
+          "do": "flow",
+          "path": [
+            "a1",
+            "a2"
+          ],
+          "label": "GET /feed"
+        },
+        {
+          "at": "fast",
+          "do": "flow",
+          "path": [
+            "a2"
+          ],
+          "reverse": true,
+          "label": "12 ms",
+          "color": "green"
+        },
+        {
+          "at": "viral",
+          "do": "unmark",
+          "target": "db"
+        },
+        {
+          "at": "surge",
+          "do": "flow",
+          "path": [
+            "a1",
+            "a2"
+          ],
+          "count": 5,
+          "speed": "fast",
+          "color": "red"
+        },
+        {
+          "at": "choke",
+          "do": "shake",
+          "target": "db",
+          "for": 2
+        },
+        {
+          "at": "choke",
+          "do": "highlight",
+          "target": "db",
+          "color": "red"
+        },
+        {
+          "at": "wait",
+          "do": "set",
+          "target": "db",
+          "sub": "p99: 4.2 s"
+        }
+      ]
+    },
+    {
+      "id": "scale-up",
+      "kind": "board",
+      "heading": "Why not a bigger server?",
+      "narration": "The first instinct is to scale up {up}. Buy a bigger machine {bigger}, then an even bigger one {more}. That works for a while {while}, but there's a hard ceiling {ceiling}. The biggest server money can buy is still just one server {one}, and if it dies {spof}, everything dies with it.",
+      "elements": [
+        {
+          "id": "s1",
+          "type": "db",
+          "label": "16 GB RAM",
+          "size": "s",
+          "at": [
+            2,
+            3.2
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "db",
+          "label": "256 GB RAM",
+          "at": [
+            5.7,
+            3
+          ]
+        },
+        {
+          "id": "s3",
+          "type": "db",
+          "label": "4 TB RAM",
+          "size": "l",
+          "at": [
+            9.6,
+            2.8
+          ]
+        },
+        {
+          "id": "u1",
+          "type": "arrow",
+          "from": "s1",
+          "to": "s2",
+          "label": "scale up"
+        },
+        {
+          "id": "u2",
+          "type": "arrow",
+          "from": "s2",
+          "to": "s3",
+          "label": "scale up"
+        },
+        {
+          "id": "limit",
+          "type": "note",
+          "text": "There is no bigger box to buy.",
+          "at": [
+            9.6,
+            5.3
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "at": "up",
+          "do": "show",
+          "targets": [
+            "s1"
+          ]
+        },
+        {
+          "at": "bigger",
+          "do": "show",
+          "targets": [
+            "s2",
+            "u1"
+          ]
+        },
+        {
+          "at": "more",
+          "do": "show",
+          "targets": [
+            "s3",
+            "u2"
+          ]
+        },
+        {
+          "at": "while",
+          "do": "pulse",
+          "target": "s3"
+        },
+        {
+          "at": "ceiling",
+          "do": "show",
+          "targets": [
+            "limit"
+          ]
+        },
+        {
+          "at": "ceiling",
+          "do": "mark",
+          "target": "s3",
+          "kind": "warn"
+        },
+        {
+          "at": "one",
+          "do": "focus",
+          "targets": [
+            "s3",
+            "limit"
+          ]
+        },
+        {
+          "at": "spof",
+          "do": "shake",
+          "target": "s3"
+        },
+        {
+          "at": "spof+0.4",
+          "do": "mark",
+          "target": "s3",
+          "kind": "cross"
+        }
+      ]
+    },
+    {
+      "id": "split",
+      "kind": "board",
+      "heading": "Sharding: split the data",
+      "narration": "Sharding takes a different path {idea}. Instead of one giant database, we split the data across several smaller ones {split}, called shards. Each shard holds only part of the users {part}. Shard one gets users A to H {s1}, shard two gets I to P {s2}, and shard three gets Q to Z {s3}. Together they still hold everything {all}, but no single machine carries the whole load.",
+      "elements": [
+        {
+          "id": "big",
+          "type": "db",
+          "label": "users",
+          "sub": "30M rows",
+          "at": [
+            6,
+            1.6
+          ]
+        },
+        {
+          "id": "sh1",
+          "type": "db",
+          "label": "Shard 1",
+          "sub": "A – H",
+          "color": "cyan",
+          "at": [
+            2.5,
+            4.4
+          ],
+          "emergeFrom": "big"
+        },
+        {
+          "id": "sh2",
+          "type": "db",
+          "label": "Shard 2",
+          "sub": "I – P",
+          "color": "green",
+          "at": [
+            6,
+            4.4
+          ],
+          "emergeFrom": "big"
+        },
+        {
+          "id": "sh3",
+          "type": "db",
+          "label": "Shard 3",
+          "sub": "Q – Z",
+          "color": "pink",
+          "at": [
+            9.5,
+            4.4
+          ],
+          "emergeFrom": "big"
+        },
+        {
+          "id": "cluster",
+          "type": "group",
+          "label": "Sharded cluster",
+          "contains": [
+            "sh1",
+            "sh2",
+            "sh3"
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "at": "idea",
+          "do": "show",
+          "targets": [
+            "big"
+          ]
+        },
+        {
+          "at": "split",
+          "do": "show",
+          "targets": [
+            "sh1",
+            "sh2",
+            "sh3"
+          ],
+          "stagger": 0.25
+        },
+        {
+          "at": "part",
+          "do": "dim",
+          "targets": [
+            "big"
+          ]
+        },
+        {
+          "at": "s1",
+          "do": "highlight",
+          "target": "sh1",
+          "for": 1.6
+        },
+        {
+          "at": "s2",
+          "do": "highlight",
+          "target": "sh2",
+          "for": 1.6
+        },
+        {
+          "at": "s3",
+          "do": "highlight",
+          "target": "sh3",
+          "for": 1.6
+        },
+        {
+          "at": "all",
+          "do": "hide",
+          "targets": [
+            "big"
+          ]
+        },
+        {
+          "at": "all",
+          "do": "show",
+          "targets": [
+            "cluster"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "routing",
+      "kind": "board",
+      "heading": "Routing with a shard key",
+      "continue": true,
+      "narration": "But now there's a new question {q}. When a request comes in for a user, which shard do we ask? We need a shard key {key}. Here, we use the user's ID with a simple rule {rule}: hash the ID, then take it modulo three. A request for user forty-two {req} reaches the router, which computes the shard {compute}, and sends the query straight to shard one {route}. No scanning, no guessing {done}.",
+      "elements": [
+        {
+          "id": "u42",
+          "type": "client",
+          "variant": "user",
+          "label": "User 42",
+          "at": [
+            2,
+            1.4
+          ]
+        },
+        {
+          "id": "router",
+          "type": "node",
+          "icon": "lucide:split",
+          "label": "Shard router",
+          "color": "yellow",
+          "at": [
+            6,
+            1.4
+          ]
+        },
+        {
+          "id": "rule",
+          "type": "code",
+          "title": "router.py",
+          "lines": [
+            "shard = hash(id) % 3",
+            "hash(42) % 3  # → 0"
+          ],
+          "at": [
+            10,
+            1.4
+          ]
+        },
+        {
+          "id": "a-in",
+          "type": "arrow",
+          "from": "u42",
+          "to": "router"
+        },
+        {
+          "id": "r1",
+          "type": "arrow",
+          "from": "router",
+          "to": "sh1",
+          "style": "dashed"
+        },
+        {
+          "id": "r2",
+          "type": "arrow",
+          "from": "router",
+          "to": "sh2",
+          "style": "dashed"
+        },
+        {
+          "id": "r3",
+          "type": "arrow",
+          "from": "router",
+          "to": "sh3",
+          "style": "dashed"
+        }
+      ],
+      "steps": [
+        {
+          "at": "q",
+          "do": "show",
+          "targets": [
+            "u42"
+          ]
+        },
+        {
+          "at": "key",
+          "do": "show",
+          "targets": [
+            "router",
+            "a-in",
+            "r1",
+            "r2",
+            "r3"
+          ]
+        },
+        {
+          "at": "rule",
+          "do": "show",
+          "targets": [
+            "rule"
+          ]
+        },
+        {
+          "at": "rule+1.2",
+          "do": "highlight",
+          "target": "rule",
+          "row": 0,
+          "for": 2.5
+        },
+        {
+          "at": "req",
+          "do": "flow",
+          "path": [
+            "a-in"
+          ],
+          "label": "id=42"
+        },
+        {
+          "at": "compute",
+          "do": "highlight",
+          "target": "rule",
+          "row": 1
+        },
+        {
+          "at": "compute",
+          "do": "pulse",
+          "target": "router"
+        },
+        {
+          "at": "route",
+          "do": "flow",
+          "path": [
+            "r1"
+          ],
+          "label": "id=42",
+          "color": "green"
+        },
+        {
+          "at": "route+0.9",
+          "do": "highlight",
+          "target": "sh1",
+          "color": "green",
+          "for": 2
+        },
+        {
+          "at": "done",
+          "do": "mark",
+          "target": "sh1",
+          "kind": "check"
+        }
+      ]
+    },
+    {
+      "id": "hot-shard",
+      "kind": "board",
+      "heading": "The catch: hot shards",
+      "narration": "Sharding isn't free {free}. Pick a bad shard key, and traffic piles onto one shard. Imagine sharding by country {country}, when most of your users live in one country. That shard runs hot at ninety-five percent {hot}, while the others sit nearly idle {idle}. This is called a hot shard {name}, and it brings back the exact bottleneck we were trying to escape.",
+      "elements": [
+        {
+          "id": "load",
+          "type": "bars",
+          "title": "Load per shard",
+          "unit": "%",
+          "max": 100,
+          "bars": [
+            {
+              "label": "Shard 1",
+              "value": 34
+            },
+            {
+              "label": "Shard 2",
+              "value": 31
+            },
+            {
+              "label": "Shard 3",
+              "value": 33
+            }
+          ],
+          "at": [
+            5.4,
+            2.6
+          ]
+        },
+        {
+          "id": "key-note",
+          "type": "note",
+          "text": "shard key = country",
+          "at": [
+            10.2,
+            2.3
+          ]
+        },
+        {
+          "id": "hot-label",
+          "type": "text",
+          "text": "Hot shard!",
+          "style": "headline",
+          "color": "red",
+          "at": [
+            5.4,
+            5.3
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "at": "free",
+          "do": "show",
+          "targets": [
+            "load"
+          ]
+        },
+        {
+          "at": "country",
+          "do": "show",
+          "targets": [
+            "key-note"
+          ]
+        },
+        {
+          "at": "hot",
+          "do": "set",
+          "target": "load",
+          "values": [
+            95,
+            12,
+            9
+          ]
+        },
+        {
+          "at": "hot+0.5",
+          "do": "highlight",
+          "target": "load",
+          "row": 0,
+          "color": "red"
+        },
+        {
+          "at": "idle",
+          "do": "pulse",
+          "target": "load"
+        },
+        {
+          "at": "name",
+          "do": "show",
+          "targets": [
+            "hot-label"
+          ]
+        },
+        {
+          "at": "name",
+          "do": "shake",
+          "target": "load"
+        }
+      ]
+    },
+    {
+      "id": "recap",
+      "kind": "board",
+      "heading": "Recap",
+      "narration": "Let's recap {recap}. One database eventually hits a ceiling {one}. Sharding splits the data across many databases {two}. A shard key decides where every row lives {three}. And choosing that key well is what keeps your shards balanced {four}. Next time, we'll look at consistent hashing {next}: the trick that lets you add shards without moving everything.",
+      "elements": [
+        {
+          "id": "ideas",
+          "type": "list",
+          "title": "Key ideas",
+          "ordered": true,
+          "stepwise": true,
+          "items": [
+            "One database hits a ceiling",
+            "Shards split the data",
+            "A shard key routes every query",
+            "Good keys avoid hot shards"
+          ],
+          "at": [
+            6,
+            2.6
+          ]
+        },
+        {
+          "id": "next",
+          "type": "text",
+          "text": "Next: consistent hashing",
+          "color": "yellow",
+          "at": [
+            6,
+            5.4
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "at": "recap",
+          "do": "show",
+          "targets": [
+            "ideas"
+          ]
+        },
+        {
+          "at": "one",
+          "do": "reveal",
+          "target": "ideas"
+        },
+        {
+          "at": "two",
+          "do": "reveal",
+          "target": "ideas"
+        },
+        {
+          "at": "three",
+          "do": "reveal",
+          "target": "ideas"
+        },
+        {
+          "at": "four",
+          "do": "reveal",
+          "target": "ideas"
+        },
+        {
+          "at": "four+1",
+          "do": "highlight",
+          "target": "ideas",
+          "row": 3,
+          "color": "green"
+        },
+        {
+          "at": "next",
+          "do": "show",
+          "targets": [
+            "next"
+          ]
+        }
+      ]
+    }
+  ]
+}

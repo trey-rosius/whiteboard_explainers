@@ -1,0 +1,61 @@
+# Hot tech topics — 2026-11-03
+
+From Hacker News, Help Net Security, AI Weekly, Tech Startups, CISO Series (week of Nov 1–3 2026).
+[x] = already made. News topics post-date Claude's knowledge: give each a fact brief (see batch-*.json).
+
+- [ ] Binance's $6.3B crypto heist with no private-key leak
+- [ ] Brotli compression bug CVE-2026-111497
+- [ ] Gheist: stolen GitHub tokens dumping repo secrets via workflows
+- [x] GitHub's npm package firewall
+- [ ] Polymarket drained via a compromised monitoring vendor script
+- [ ] Ivanti VPN zero-days chained together
+- [ ] Hackers heating supermarket fridges to 50°C (OT attacks)
+- [ ] Fake nuclear alerts pushed through hacked emergency apps
+- [ ] Tampered Claude Code extension installing an SSH backdoor
+- [ ] Escaping the built-in browsers of AI coding tools
+- [ ] Teams-based fake IT help desk attacks
+- [ ] Microsoft Authenticator Android account takeover flaw
+- [ ] Tailscale SSH privilege-escalation fixes
+- [ ] Volt Typhoon's rotating relay network
+- [ ] NIST post-quantum migration deadlines
+- [ ] OpenSSL 4.1 and DTLS 1.3
+- [ ] Northflank breach leaking customers' AI API keys
+- [ ] Dormant AI agents that still hold access
+- [ ] AI agents raising their own crypto spending caps
+- [ ] Postman auto-installing AI plugins
+- [ ] OpenAI re-enabling training on Codex chats
+- [ ] The Astra "LLM edits Qwen weights" claim and the pushback
+- [ ] Anthropic Message Threads: send history once, 35% lower latency
+- [ ] Meituan LongCat-2.5: 1.6T-parameter mixture of experts
+- [ ] DeepSeek V5 training on 160K Huawei Ascend chips
+- [ ] Google Project Suncatcher: TPUs in orbit
+- [ ] OpenAI Grid Protectors: data centers that flex power demand
+- [ ] 1 GW AI data centers and the power grid
+- [ ] Fujifilm making 5x more tape for AI archives
+- [ ] Marvell buying Lumentum: why optics matter for AI clusters
+- [ ] Oracle raising $20B for AI infrastructure
+- [ ] Anthropic's S-1: $895B in compute commitments
+- [ ] Nvidia's 51% non-Chinese revenue rule for Asian clouds
+- [ ] Putin ordering data centers to reserve 10% for the state
+- [ ] Apple Intelligence in China on Alibaba's Qwen
+- [ ] Figure's BotQ: one humanoid robot per hour
+- [ ] GDPx benchmark: top model solves 12%
+- [ ] Frontier models fail at team negotiation
+- [ ] Transformers that reorder their layers at inference
+- [x] Yandex FLAMIA attention kernels on Blackwell
+- [ ] Okta Agent SSO: identities for AI agents
+- [ ] Computer-use agents in the OpenAI Agents API
+- [x] r/opensource bans AI projects
+- [ ] AI slop flooding open-source pull requests
+- [ ] Gitbook breach
+- [ ] Exposure window vs MTTR for vulnerability management
+- [ ] Signed build provenance with Witness
+- [x] Immutable OS: Ubuntu Core Desktop and Amutable
+- [ ] 71% of exploits land within a week of disclosure
+- [ ] Third-party supplier breaches (70% of victims)
+- [ ] Platform engineering and internal developer platforms
+- [x] FinOps: cloud cost as an engineering metric
+- [ ] Chess engine on a Pentium vs Kasparov 1996
+- [ ] Handles are better than pointers
+- [ ] Mixture-of-experts models explained
+- [ ] Prompt caching and long-context latency

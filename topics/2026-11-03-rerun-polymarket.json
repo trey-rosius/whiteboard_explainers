@@ -1,0 +1,6 @@
+[
+  {
+    "topic": "Polymarket drained via a compromised monitoring vendor script",
+    "brief": "News hook (Nov 2 2026, per Tech Startups): Polymarket is reimbursing traders $3.9 million after malicious code, injected through a compromised third-party monitoring vendor, hijacked logged-in sessions and drained accounts. Explain the attack class: a web app loads a vendor's script (analytics/monitoring) that runs with full page privileges; if the vendor is compromised, its script can act as the logged-in user. Defences: limit third-party scripts, Subresource Integrity on pinned versions, a strict Content Security Policy, and re-authentication for withdrawals. Use only these facts; do not invent attacker names, dates or other figures."
+  }
+]

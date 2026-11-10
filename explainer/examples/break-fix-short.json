@@ -1,0 +1,283 @@
+{
+ "id": "break-fix-short",
+ "title": "Why Passwords Need Salt",
+ "format": "9:16",
+ "theme": "educloud",
+ "voice": {
+  "provider": "elevenlabs"
+ },
+ "targetSeconds": 40,
+ "pronounce": {},
+ "scenes": [
+  {
+   "id": "intro",
+   "kind": "title",
+   "kicker": "Security basics",
+   "title": "Why Passwords Need Salt",
+   "icon": "lucide:lock",
+   "narration": "Why passwords need salt. Watch what happens without it."
+  },
+  {
+   "id": "works",
+   "kind": "board",
+   "heading": "Storing a password",
+   "narration": "{ada} Ada signs up with the password {pw} sunshine. The app never stores it. {hash} A hash function scrambles it, and {store} only the scrambled value is saved. {ok} Login just repeats the same steps.",
+   "elements": [
+    {
+     "id": "ada",
+     "type": "client",
+     "variant": "user",
+     "label": "Ada",
+     "color": "orange",
+     "at": [
+      1.4,
+      1.2
+     ]
+    },
+    {
+     "id": "ada-chip",
+     "type": "chip",
+     "text": "sunshine",
+     "color": "orange",
+     "at": [
+      4.2,
+      1.2
+     ]
+    },
+    {
+     "id": "fn",
+     "type": "node",
+     "icon": "lucide:shuffle",
+     "label": "Hash",
+     "color": "yellow",
+     "at": [
+      3,
+      3.6
+     ]
+    },
+    {
+     "id": "table",
+     "type": "db",
+     "label": "Users table",
+     "at": [
+      3,
+      7.1
+     ]
+    },
+    {
+     "id": "in",
+     "type": "arrow",
+     "from": "ada",
+     "to": "fn"
+    },
+    {
+     "id": "out",
+     "type": "arrow",
+     "from": "fn",
+     "to": "table"
+    }
+   ],
+   "steps": [
+    {
+     "at": "ada",
+     "do": "show",
+     "targets": [
+      "ada"
+     ]
+    },
+    {
+     "at": "pw",
+     "do": "show",
+     "targets": [
+      "ada-chip"
+     ]
+    },
+    {
+     "at": "hash",
+     "do": "show",
+     "targets": [
+      "fn",
+      "in"
+     ]
+    },
+    {
+     "at": "hash",
+     "do": "move",
+     "target": "ada-chip",
+     "to": [
+      4.9,
+      3.1
+     ]
+    },
+    {
+     "at": "store",
+     "do": "show",
+     "targets": [
+      "table",
+      "out"
+     ]
+    },
+    {
+     "at": "store",
+     "do": "set",
+     "target": "ada-chip",
+     "text": "a1f3"
+    },
+    {
+     "at": "store",
+     "do": "move",
+     "target": "ada-chip",
+     "to": [
+      5,
+      6.6
+     ]
+    },
+    {
+     "at": "ok",
+     "do": "mark",
+     "target": "fn",
+     "kind": "check"
+    }
+   ]
+  },
+  {
+   "id": "breaks",
+   "kind": "board",
+   "continue": true,
+   "narration": "Now {kofi} Kofi picks sunshine too, and gets {same} the exact same hash. An attacker who {guess} cracks one has {both} cracked both. One guess cracks everyone.",
+   "elements": [
+    {
+     "id": "kofi",
+     "type": "client",
+     "variant": "user",
+     "label": "Kofi",
+     "color": "purple",
+     "at": [
+      4.6,
+      1.2
+     ]
+    },
+    {
+     "id": "kofi-chip",
+     "type": "chip",
+     "text": "a1f3",
+     "color": "purple",
+     "at": [
+      4.6,
+      3
+     ]
+    },
+    {
+     "id": "cracked",
+     "type": "text",
+     "text": "Cracked",
+     "style": "stamp",
+     "at": [
+      3,
+      5.2
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "at": "kofi",
+     "do": "show",
+     "targets": [
+      "kofi",
+      "kofi-chip"
+     ]
+    },
+    {
+     "at": "same",
+     "do": "move",
+     "target": "kofi-chip",
+     "to": [
+      5,
+      7.7
+     ]
+    },
+    {
+     "at": "guess",
+     "do": "strike",
+     "target": "fn"
+    },
+    {
+     "at": "guess",
+     "do": "unmark",
+     "target": "fn"
+    },
+    {
+     "at": "both",
+     "do": "show",
+     "targets": [
+      "cracked"
+     ]
+    },
+    {
+     "at": "both",
+     "do": "shake",
+     "target": "table"
+    }
+   ]
+  },
+  {
+   "id": "fix",
+   "kind": "board",
+   "continue": true,
+   "narration": "The fix is {salt} a salt: random text, different for each user, added before hashing. {ada-new} Ada gets one hash. {kofi-new} Kofi gets a completely different one. {end} One guess cracks no one.",
+   "elements": [
+    {
+     "id": "salt",
+     "type": "node",
+     "icon": "lucide:dices",
+     "label": "Salt",
+     "color": "green",
+     "at": [
+      1,
+      3.6
+     ]
+    },
+    {
+     "id": "mix",
+     "type": "arrow",
+     "from": "salt",
+     "to": "fn",
+     "color": "green"
+    }
+   ],
+   "steps": [
+    {
+     "at": "salt",
+     "do": "unstrike",
+     "target": "fn"
+    },
+    {
+     "at": "salt",
+     "do": "show",
+     "targets": [
+      "salt",
+      "mix"
+     ]
+    },
+    {
+     "at": "ada-new",
+     "do": "set",
+     "target": "ada-chip",
+     "text": "9be2"
+    },
+    {
+     "at": "kofi-new",
+     "do": "set",
+     "target": "kofi-chip",
+     "text": "7c04"
+    },
+    {
+     "at": "end",
+     "do": "mark",
+     "target": "table",
+     "kind": "check"
+    }
+   ]
+  }
+ ]
+}

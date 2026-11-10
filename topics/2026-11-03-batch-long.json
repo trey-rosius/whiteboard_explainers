@@ -1,0 +1,10 @@
+[
+ {
+  "topic": "Faster attention kernels: Yandex FLAMIA on Nvidia Blackwell",
+  "brief": "Full 2-minute explainer: build the diagram step by step, show the before/after and end with the takeaway. News hook (Nov 2026, per AI Weekly): Yandex open-sourced FLAMIA, attention kernels for Nvidia Blackwell GPUs that reportedly speed up the training backward pass about 2x with little impact on loss. Explain why attention needs custom kernels: memory traffic between HBM and on-chip SRAM is the bottleneck, so tiling and fusing operations (the FlashAttention idea) keep data on-chip. Keep claims about FLAMIA to these facts only."
+ },
+ {
+  "topic": "Immutable operating systems explained",
+  "brief": "Full 2-minute explainer: build the diagram step by step, show the before/after and end with the takeaway. News hook (week of Nov 1 2026, per Help Net Security): Canonical is restarting Ubuntu Core Desktop, an immutable, attestable edition it intends to become the default Ubuntu desktop. A project called Amutable Foundations ships a Linux system with no SSH and no package manager, where each machine sends signed reports of its software and configuration. Explain the concept: a read-only base image, atomic updates and rollback, and attestation (the machine proves what it runs). Use only these facts; no invented versions or dates."
+ }
+]

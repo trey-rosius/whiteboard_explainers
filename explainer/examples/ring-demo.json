@@ -1,0 +1,41 @@
+{
+  "id": "ring-demo",
+  "title": "Hash ring demo",
+  "format": "16:9",
+  "theme": "chalkboard",
+  "voice": { "provider": "none" },
+  "scenes": [
+    {
+      "id": "ring",
+      "kind": "board",
+      "heading": "The hash ring",
+      "narration": "Picture every possible hash value {ring} bent into a circle. We hash each server's name to place it on the ring: server A {a}, server B {b}, and server C {c}. Now a key arrives {key}. To find its owner, we walk clockwise {walk} until we hit a server. Here that's server B {owner}. Add server D {d}, and only the keys between B and D change owners {span}. Everything else stays put {stay}.",
+      "elements": [
+        { "id": "ring", "type": "ring", "label": "Hash ring", "sub": "0 → 2³²", "at": [6, 3.1] },
+        { "id": "sa", "type": "marker", "ring": "ring", "angle": 30, "kind": "server", "label": "Server A", "color": "cyan" },
+        { "id": "sb", "type": "marker", "ring": "ring", "angle": 150, "kind": "server", "label": "Server B", "color": "green" },
+        { "id": "sc", "type": "marker", "ring": "ring", "angle": 265, "kind": "server", "label": "Server C", "color": "pink" },
+        { "id": "k42", "type": "marker", "ring": "ring", "angle": 100, "kind": "key", "label": "user:42", "color": "yellow" },
+        { "id": "sd", "type": "marker", "ring": "ring", "angle": 210, "kind": "server", "label": "Server D", "color": "orange" },
+        { "id": "rule", "type": "note", "text": "Owner = first server clockwise", "at": [10.6, 1.4] },
+        { "id": "moved", "type": "note", "text": "Only B → D range moves", "at": [10.6, 4.9] }
+      ],
+      "steps": [
+        { "at": "ring", "do": "show", "targets": ["ring"] },
+        { "at": "a", "do": "show", "targets": ["sa"] },
+        { "at": "b", "do": "show", "targets": ["sb"] },
+        { "at": "c", "do": "show", "targets": ["sc"] },
+        { "at": "key", "do": "show", "targets": ["k42"] },
+        { "at": "walk", "do": "travel", "target": "k42", "to": "sb", "label": "user:42" },
+        { "at": "walk", "do": "show", "targets": ["rule"] },
+        { "at": "owner", "do": "mark", "target": "sb", "kind": "check" },
+        { "at": "d", "do": "show", "targets": ["sd"] },
+        { "at": "d", "do": "unmark", "target": "sb" },
+        { "at": "span", "do": "span", "target": "ring", "from": "sb", "to": "sd", "color": "orange" },
+        { "at": "span", "do": "show", "targets": ["moved"] },
+        { "at": "stay", "do": "pulse", "target": "sa" },
+        { "at": "stay+0.3", "do": "pulse", "target": "sc" }
+      ]
+    }
+  ]
+}

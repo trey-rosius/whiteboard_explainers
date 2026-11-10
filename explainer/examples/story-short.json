@@ -1,0 +1,718 @@
+{
+ "id": "story-short",
+ "title": "Mixture of Experts",
+ "format": "9:16",
+ "theme": "educloud",
+ "voice": {
+  "provider": "elevenlabs"
+ },
+ "targetSeconds": 60,
+ "pronounce": {},
+ "scenes": [
+  {
+   "id": "intro",
+   "kind": "title",
+   "kicker": "AI architecture",
+   "title": "Mixture of Experts",
+   "icon": "lucide:split",
+   "narration": "Mixture of Experts. How a giant AI model stays cheap to run."
+  },
+  {
+   "id": "dense",
+   "kind": "board",
+   "narration": "Say {paris} the word Paris enters an AI model. In a normal model, {all} every parameter runs for every word. So when the model {big} grows, every word costs more.",
+   "elements": [
+    {
+     "id": "word",
+     "type": "chip",
+     "text": "Paris",
+     "at": [
+      3,
+      0.45
+     ]
+    },
+    {
+     "id": "model",
+     "type": "node",
+     "icon": "lucide:brain",
+     "label": "AI model",
+     "color": "orange",
+     "size": "l",
+     "at": [
+      3,
+      4.2
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "at": "paris",
+     "do": "show",
+     "targets": [
+      "word",
+      "model"
+     ]
+    },
+    {
+     "at": "all",
+     "do": "move",
+     "target": "word",
+     "to": [
+      3,
+      2.1
+     ]
+    },
+    {
+     "at": "all+0.5",
+     "do": "highlight",
+     "target": "model",
+     "color": "orange"
+    },
+    {
+     "at": "big",
+     "do": "set",
+     "target": "model",
+     "sub": "all of it runs"
+    },
+    {
+     "at": "big+0.3",
+     "do": "shake",
+     "target": "model"
+    }
+   ]
+  },
+  {
+   "id": "split",
+   "kind": "board",
+   "continue": true,
+   "narration": "Mixture of Experts {split} splits that model into smaller experts. Mixtral, {eight} for example, has eight. Then, in each layer, {router} a router decides who does the work.",
+   "elements": [
+    {
+     "id": "e1",
+     "type": "node",
+     "icon": "lucide:cpu",
+     "label": "E1",
+     "color": "cyan",
+     "size": "s",
+     "at": [
+      0.8,
+      4.3
+     ],
+     "emergeFrom": "model"
+    },
+    {
+     "id": "e2",
+     "type": "node",
+     "icon": "lucide:cpu",
+     "label": "E2",
+     "color": "cyan",
+     "size": "s",
+     "at": [
+      2,
+      4.3
+     ],
+     "emergeFrom": "model"
+    },
+    {
+     "id": "e3",
+     "type": "node",
+     "icon": "lucide:cpu",
+     "label": "E3",
+     "color": "cyan",
+     "size": "s",
+     "at": [
+      4,
+      4.3
+     ],
+     "emergeFrom": "model"
+    },
+    {
+     "id": "e4",
+     "type": "node",
+     "icon": "lucide:cpu",
+     "label": "E4",
+     "color": "cyan",
+     "size": "s",
+     "at": [
+      5.2,
+      4.3
+     ],
+     "emergeFrom": "model"
+    },
+    {
+     "id": "e5",
+     "type": "node",
+     "icon": "lucide:cpu",
+     "label": "E5",
+     "color": "cyan",
+     "size": "s",
+     "at": [
+      0.8,
+      6.2
+     ],
+     "emergeFrom": "model"
+    },
+    {
+     "id": "e6",
+     "type": "node",
+     "icon": "lucide:cpu",
+     "label": "E6",
+     "color": "cyan",
+     "size": "s",
+     "at": [
+      2,
+      6.2
+     ],
+     "emergeFrom": "model"
+    },
+    {
+     "id": "e7",
+     "type": "node",
+     "icon": "lucide:cpu",
+     "label": "E7",
+     "color": "cyan",
+     "size": "s",
+     "at": [
+      4,
+      6.2
+     ],
+     "emergeFrom": "model"
+    },
+    {
+     "id": "e8",
+     "type": "node",
+     "icon": "lucide:cpu",
+     "label": "E8",
+     "color": "cyan",
+     "size": "s",
+     "at": [
+      5.2,
+      6.2
+     ],
+     "emergeFrom": "model"
+    },
+    {
+     "id": "router",
+     "type": "node",
+     "icon": "lucide:route",
+     "label": "Router",
+     "color": "yellow",
+     "at": [
+      3,
+      1.7
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "at": "split",
+     "do": "move",
+     "target": "word",
+     "to": [
+      3,
+      0.45
+     ]
+    },
+    {
+     "at": "split",
+     "do": "hide",
+     "targets": [
+      "model"
+     ]
+    },
+    {
+     "at": "split",
+     "do": "show",
+     "targets": [
+      "e1",
+      "e2",
+      "e3",
+      "e4"
+     ],
+     "stagger": 0.12
+    },
+    {
+     "at": "eight",
+     "do": "show",
+     "targets": [
+      "e5",
+      "e6",
+      "e7",
+      "e8"
+     ],
+     "stagger": 0.12
+    },
+    {
+     "at": "router",
+     "do": "show",
+     "targets": [
+      "router"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "route",
+   "kind": "board",
+   "continue": true,
+   "narration": "{go} Paris reaches the router, and it picks {two} just two experts. {idle} The other six do nothing. {work} Those two do the work, and {out} out comes the next word.",
+   "elements": [
+    {
+     "id": "r2",
+     "type": "arrow",
+     "from": "router",
+     "to": "e2",
+     "color": "cyan"
+    },
+    {
+     "id": "r3",
+     "type": "arrow",
+     "from": "router",
+     "to": "e3",
+     "color": "cyan"
+    },
+    {
+     "id": "out",
+     "type": "node",
+     "icon": "lucide:sparkles",
+     "label": "Next word",
+     "color": "green",
+     "size": "s",
+     "at": [
+      3,
+      8.6
+     ]
+    },
+    {
+     "id": "o2",
+     "type": "arrow",
+     "from": "e2",
+     "to": "out",
+     "color": "green",
+     "bend": 0.3
+    },
+    {
+     "id": "o3",
+     "type": "arrow",
+     "from": "e3",
+     "to": "out",
+     "color": "green",
+     "bend": -0.3
+    }
+   ],
+   "steps": [
+    {
+     "at": "go",
+     "do": "move",
+     "target": "word",
+     "to": [
+      5,
+      1.5
+     ]
+    },
+    {
+     "at": "two",
+     "do": "show",
+     "targets": [
+      "r2",
+      "r3"
+     ]
+    },
+    {
+     "at": "two+0.2",
+     "do": "flow",
+     "path": [
+      "r2"
+     ],
+     "color": "yellow"
+    },
+    {
+     "at": "two+0.2",
+     "do": "flow",
+     "path": [
+      "r3"
+     ],
+     "color": "yellow"
+    },
+    {
+     "at": "two+0.7",
+     "do": "highlight",
+     "target": "e2",
+     "color": "yellow"
+    },
+    {
+     "at": "two+0.7",
+     "do": "highlight",
+     "target": "e3",
+     "color": "yellow"
+    },
+    {
+     "at": "idle",
+     "do": "dim",
+     "targets": [
+      "e1",
+      "e4",
+      "e5",
+      "e6",
+      "e7",
+      "e8"
+     ]
+    },
+    {
+     "at": "work",
+     "do": "pulse",
+     "target": "e2"
+    },
+    {
+     "at": "work",
+     "do": "pulse",
+     "target": "e3"
+    },
+    {
+     "at": "out",
+     "do": "show",
+     "targets": [
+      "out",
+      "o2",
+      "o3"
+     ]
+    },
+    {
+     "at": "out+0.2",
+     "do": "flow",
+     "path": [
+      "o2"
+     ],
+     "color": "green"
+    },
+    {
+     "at": "out+0.2",
+     "do": "flow",
+     "path": [
+      "o3"
+     ],
+     "color": "green"
+    },
+    {
+     "at": "out+0.9",
+     "do": "move",
+     "target": "word",
+     "to": [
+      5,
+      8.4
+     ]
+    },
+    {
+     "at": "out+0.9",
+     "do": "set",
+     "target": "word",
+     "text": "is"
+    }
+   ]
+  },
+  {
+   "id": "again",
+   "kind": "board",
+   "continue": true,
+   "narration": "{again} That word goes in next, and the router {pair} can pick a different pair.",
+   "elements": [
+    {
+     "id": "r1",
+     "type": "arrow",
+     "from": "router",
+     "to": "e1",
+     "color": "cyan"
+    },
+    {
+     "id": "r4",
+     "type": "arrow",
+     "from": "router",
+     "to": "e4",
+     "color": "cyan"
+    }
+   ],
+   "steps": [
+    {
+     "at": "again",
+     "do": "move",
+     "target": "word",
+     "to": [
+      5,
+      1.5
+     ]
+    },
+    {
+     "at": "again",
+     "do": "hide",
+     "targets": [
+      "o2",
+      "o3",
+      "r2",
+      "r3"
+     ]
+    },
+    {
+     "at": "again",
+     "do": "dim",
+     "targets": [
+      "out"
+     ]
+    },
+    {
+     "at": "pair",
+     "do": "unhighlight",
+     "target": "e2"
+    },
+    {
+     "at": "pair",
+     "do": "unhighlight",
+     "target": "e3"
+    },
+    {
+     "at": "pair",
+     "do": "dim",
+     "targets": [
+      "e2",
+      "e3"
+     ]
+    },
+    {
+     "at": "pair",
+     "do": "undim",
+     "targets": [
+      "e1",
+      "e4"
+     ]
+    },
+    {
+     "at": "pair",
+     "do": "show",
+     "targets": [
+      "r1",
+      "r4"
+     ]
+    },
+    {
+     "at": "pair+0.2",
+     "do": "flow",
+     "path": [
+      "r1"
+     ],
+     "color": "yellow"
+    },
+    {
+     "at": "pair+0.2",
+     "do": "flow",
+     "path": [
+      "r4"
+     ],
+     "color": "yellow"
+    },
+    {
+     "at": "pair+0.7",
+     "do": "highlight",
+     "target": "e1",
+     "color": "yellow"
+    },
+    {
+     "at": "pair+0.7",
+     "do": "highlight",
+     "target": "e4",
+     "color": "yellow"
+    }
+   ]
+  },
+  {
+   "id": "payoff",
+   "kind": "board",
+   "continue": true,
+   "narration": "Here's the payoff. Mixtral {total} has about forty-seven billion parameters, but each word {active} uses only about thirteen billion.",
+   "elements": [
+    {
+     "id": "all-experts",
+     "type": "group",
+     "label": "47B total",
+     "contains": [
+      "e1",
+      "e2",
+      "e3",
+      "e4",
+      "e5",
+      "e6",
+      "e7",
+      "e8"
+     ],
+     "color": "cyan"
+    },
+    {
+     "id": "cost",
+     "type": "chip",
+     "text": "13B per word",
+     "color": "green",
+     "at": [
+      3,
+      9.4
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "at": "total",
+     "do": "hide",
+     "targets": [
+      "out",
+      "word"
+     ]
+    },
+    {
+     "at": "total",
+     "do": "undim",
+     "targets": [
+      "e2",
+      "e3",
+      "e5",
+      "e6",
+      "e7",
+      "e8"
+     ]
+    },
+    {
+     "at": "total",
+     "do": "show",
+     "targets": [
+      "all-experts"
+     ]
+    },
+    {
+     "at": "active",
+     "do": "dim",
+     "targets": [
+      "e2",
+      "e3",
+      "e5",
+      "e6",
+      "e7",
+      "e8"
+     ]
+    },
+    {
+     "at": "active",
+     "do": "show",
+     "targets": [
+      "cost"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "catch",
+   "kind": "board",
+   "continue": true,
+   "narration": "{catch} But here's the catch. {mem} All eight experts stay loaded in memory, even the idle ones.",
+   "elements": [
+    {
+     "id": "memory",
+     "type": "chip",
+     "text": "All 47B in memory",
+     "color": "red",
+     "at": [
+      3,
+      8.4
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "at": "catch",
+     "do": "dim",
+     "targets": [
+      "cost",
+      "r1",
+      "r4"
+     ]
+    },
+    {
+     "at": "mem",
+     "do": "undim",
+     "targets": [
+      "e2",
+      "e3",
+      "e5",
+      "e6",
+      "e7",
+      "e8"
+     ]
+    },
+    {
+     "at": "mem",
+     "do": "show",
+     "targets": [
+      "memory"
+     ]
+    },
+    {
+     "at": "mem+0.4",
+     "do": "highlight",
+     "target": "all-experts",
+     "color": "red"
+    }
+   ]
+  },
+  {
+   "id": "close",
+   "kind": "board",
+   "continue": true,
+   "narration": "{big} So you pay for a big model's memory, but {small} a small model's compute. {name} That's Mixture of Experts.",
+   "elements": [],
+   "steps": [
+    {
+     "at": "big",
+     "do": "pulse",
+     "target": "memory"
+    },
+    {
+     "at": "small",
+     "do": "undim",
+     "targets": [
+      "cost",
+      "r1",
+      "r4"
+     ]
+    },
+    {
+     "at": "small",
+     "do": "dim",
+     "targets": [
+      "e2",
+      "e3",
+      "e5",
+      "e6",
+      "e7",
+      "e8"
+     ]
+    },
+    {
+     "at": "small+0.2",
+     "do": "flow",
+     "path": [
+      "r1"
+     ],
+     "color": "yellow"
+    },
+    {
+     "at": "small+0.2",
+     "do": "flow",
+     "path": [
+      "r4"
+     ],
+     "color": "yellow"
+    },
+    {
+     "at": "name",
+     "do": "pulse",
+     "target": "cost"
+    }
+   ]
+  }
+ ]
+}
