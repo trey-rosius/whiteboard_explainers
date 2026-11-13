@@ -32,7 +32,9 @@ import { ApiNamespaceClient } from '@aws-blocks/blocks/client';
 import { getRenderProgress, presignUrl, renderMediaOnLambda, renderStillOnLambda, type AwsRegion } from '@remotion/lambda-client';
 import { validate } from '../engine/validate';
 import { autofixLayout, autofixText } from '../engine/autofix';
-import { alignTranscript, cutWav, findRestarts, parseNarration, pcm16Wav, readPcm16, wavDuration, type TranscriptWord } from '../engine/narration';
+import { alignTranscript, cutWav, findRestarts, keptSegments, parseNarration, pcm16Wav, readPcm16, wavDuration, type TranscriptWord } from '../engine/narration';
+import { CONTENT, PRESENTER } from '../engine/layout';
+import { isCaptionStyle, type CaptionChoice } from '../engine/caption-list';
 import { MPEGDecoder } from 'mpg123-decoder';
 import type { SceneTiming } from '../engine/compile';
 import type { Issue, RenderPlan } from '../engine/plan';
@@ -62,6 +64,8 @@ export interface PipelineInput {
   format?: '16:9' | '9:16';
   /** A theme id, or 'auto'/absent to let the script writer match it to the topic. */
   theme?: ThemeChoice;
+  /** A caption style, or 'auto'/absent to pick one that reads well on the background. */
+  captions?: CaptionChoice;
   /** Looks used by recent videos, so Auto mode keeps the channel varied. */
   recentThemes?: string[];
   minutes?: number;
@@ -267,6 +271,13 @@ type Emit = ReturnType<typeof makeEmitter>;
 
 // ─── Claude (Bedrock Converse, forced tool output) ──────────────────────────────
 
+/** Where the narrator's face sits, in the grid units the writer places things with. */
+function presenterNote(format: '16:9' | '9:16') {
+  const c = CONTENT[format], z = PRESENTER[format].clear;
+  const gx = Math.floor(((z.x - c.x) / (c.w / c.cols)) * 4) / 4, gy = Math.floor(((z.y - c.y) / (c.h / c.rows)) * 4) / 4;
+  return `The narrator's face is shown in a circle in the bottom-right corner of every scene. Nothing may reach into that corner: no element's box may extend both right of x ${gx} and below y ${gy}. Keep diagrams centred in the rest of the board.`;
+}
+
 async function askForSpec(messages: Message[]): Promise<unknown> {
   const res = await bedrock.send(new ConverseCommand({
     modelId: MODEL,
@@ -390,6 +401,10 @@ async function run(input: PipelineInput, context: Ctx, ep: string, prefix: strin
   const enforce = (spec: any) => ({
     ...spec,
     brandKit: brandKit(),
+    // The user's caption choice; otherwise the harness picks per background (the writer doesn't choose).
+    captions: isCaptionStyle(input.captions) ? input.captions : undefined,
+    // A self-narrated video can show the narrator's face, so its boards keep that corner clear whether or not they turn the camera on.
+    presenter: input.narration === 'self' ? true : undefined,
     scenes: openWithTitle(lockNarration(spec.scenes), spec.title),
     id: ep,
     format,
@@ -507,6 +522,7 @@ async function run(input: PipelineInput, context: Ctx, ep: string, prefix: strin
         '',
         `Format: ${format} · ${themeInstruction} · Target length: ${targetSeconds} seconds of narration in total (±10%). At ~2.9 spoken words per second that is about ${Math.round(targetSeconds * 2.9)} words across all scenes — count them.`,
         `Use "id": "${ep}" and "targetSeconds": ${targetSeconds}.`,
+        input.narration === 'self' ? presenterNote(format) : '',
         'The first scene is a title scene showing the video title, at most 44 characters. Its narration opens by saying that exact title, then gives a one-line hook of at most 12 words (a longer one is removed). For example, title "What Happens When You Message an AI Chatbot", narration "What happens when you message an AI chatbot? You hit send. Let\'s follow your message." "Let\'s look at <title>" is also fine.',
         'Write for someone who has never heard of this topic (rule 16, unless the notes name another audience). The research brief is written for specialists: take the facts from it, never its wording. It is a pantry, not a checklist: use only what serves the one idea this video teaches. If it has a REAL STORY, open with it (rule 34) and test each part of the solution on one everyday example (rule 35).',
         'First think through the teaching plan (arc beats), then write narration with cues, then boards. Diagrams must be large and centred: fill 60–85% of the board. The picture must illustrate the narration: draw each thing named, especially spoken lists item by item on their own cues, and hide what is finished so the screen is never crowded. Follow every rule in the skill.',
@@ -678,6 +694,7 @@ async function run(input: PipelineInput, context: Ctx, ep: string, prefix: strin
           let bytes = await getBytes(audioKey);
           let durationSec = wavDuration(bytes);
           if (!durationSec || durationSec < 0.3) { issues[sc.id] = 'This recording could not be read. Record it again.'; continue; }
+          const takeSec = durationSec;
           const parsed = parseNarration(sc.narration!, spec.pronounce);
           await emit('voicing', `Cleaning up background noise · scene ${k + 1}/${narrated.length}`, { pct: Math.round((k / narrated.length) * 100) });
           // Edited audio is kept outside narration/, which lists the person's own takes. Their original recording is untouched.
@@ -714,7 +731,16 @@ async function run(input: PipelineInput, context: Ctx, ep: string, prefix: strin
             alignment = { ...alignTranscript(parsed.tokens, [], durationSec), coverage: 1, missing: [] as string[] };
             await emit('voicing', `Scene ${k + 1}: speech-to-text unavailable, so timing is approximate and mistakes were not cut (${String(e?.message ?? e).slice(0, 80)})`);
           }
-          await putJson(cacheKey, { audioKey: finalKey, originalKey: audioKey, cuts, durationSec, words: alignment.words, hash: crypto.createHash('sha256').update(finalKey).digest('hex').slice(0, 16), coverage: alignment.coverage, missing: alignment.missing });
+          // The take's camera video, if they recorded one: the browser noted where the trimmed audio starts within it.
+          const presenter = await (async () => {
+            const sideKey = audioKey.replace(/\.wav$/, '.presenter.json');
+            if (!(await exists(sideKey))) return undefined;
+            const side = await getJson<{ key: string; offset: number; seconds: number }>(sideKey);
+            if (!side.key?.startsWith(`${prefix}/narration/`) || !(await exists(side.key))) return undefined;
+            const segments = keptSegments(cuts, takeSec).map((s) => ({ from: s.from + side.offset, to: Math.min(side.seconds, s.to + side.offset) })).filter((s) => s.to > s.from);
+            return segments.length ? { key: side.key, segments, seconds: side.seconds } : undefined;
+          })().catch(() => undefined);
+          await putJson(cacheKey, { audioKey: finalKey, originalKey: audioKey, cuts, durationSec, presenter, words: alignment.words, hash: crypto.createHash('sha256').update(finalKey).digest('hex').slice(0, 16), coverage: alignment.coverage, missing: alignment.missing });
           if (alignment.coverage < 0.5 && parsed.tokens.length >= 4 && !force) {
             issues[sc.id] = `Only ${Math.round(alignment.coverage * 100)}% of this scene's words were heard. Check you recorded the right scene and that the audio is clear.`;
             continue;
@@ -788,8 +814,9 @@ async function run(input: PipelineInput, context: Ctx, ep: string, prefix: strin
     const verdict = await context.step(`validate-timed-${round}`, async () => {
       const timings: Record<string, SceneTiming> = {};
       for (const { sceneId, cacheKey } of refs) {
-        const t = await getJson<{ audioKey: string; durationSec: number; words: SceneTiming['words']; hash: string }>(cacheKey);
+        const t = await getJson<{ audioKey: string; durationSec: number; words: SceneTiming['words']; hash: string; presenter?: { key: string; segments: Array<{ from: number; to: number }>; seconds: number } }>(cacheKey);
         timings[sceneId] = { src: await publicUrl(t.audioKey), durationSec: t.durationSec, words: t.words, hash: t.hash };
+        if (t.presenter) timings[sceneId].presenter = { src: await publicUrl(t.presenter.key), segments: t.presenter.segments, seconds: t.presenter.seconds };
       }
       const timingsKey = await putJson(`${prefix}/timings.r${round}.json`, timings);
       const key = await autoLayout(specKey, timings, saveSpec, emit);

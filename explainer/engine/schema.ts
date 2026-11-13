@@ -7,6 +7,7 @@
  *  - Everything is strictly validated; unknown keys are rejected so typos surface as errors.
  */
 import { TITLE_STYLES } from './title';
+import { CAPTION_STYLES } from './captions';
 import { THEME_IDS } from './theme-list';
 import { z } from 'zod';
 
@@ -302,7 +303,8 @@ export const VideoSpec = z.object({
   title: z.string().min(1),
   format: z.enum(['16:9', '9:16']).default('16:9'),
   theme: z.enum(THEME_IDS).default('chalkboard'),
-  captions: z.enum(['off', 'subtle', 'karaoke']).optional(),
+  /** Leave out: the harness varies the caption design between videos. */
+  captions: z.enum(CAPTION_STYLES).optional(),
   brand: z.string().max(24).optional(),
   /** Set by the pipeline, not the writer: corner logo and closing card. */
   brandKit: z.object({ logo: z.string(), mark: z.string(), url: z.string(), line: z.string().optional() }).strict().optional(),
@@ -322,6 +324,8 @@ export const VideoSpec = z.object({
   /** Spoken replacements, e.g. { "PostgreSQL": "post-gress Q L", "K8s": "Kubernetes" }. Captions still show the key. */
   pronounce: z.record(z.string()).default({}),
   music: z.object({ src: z.string(), volume: z.number().min(0).max(1).default(0.12) }).strict().optional(),
+  /** Set by the pipeline, not the writer: the narrator records their face, shown in a circle in the bottom-right corner, so the board keeps that corner clear. */
+  presenter: z.boolean().optional(),
   /** Requested length; the validator rejects videos more than 20% off (warns beyond 10%). */
   targetSeconds: z.number().positive().optional(),
   scenes: z.array(Scene).min(1),

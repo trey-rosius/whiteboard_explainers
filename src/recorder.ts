@@ -5,7 +5,7 @@
 import { explainer } from 'aws-blocks';
 import { html, nothing } from 'lit-html';
 import { unsafeSVG } from 'lit-html/directives/unsafe-svg.js';
-import { Check, CircleStop, LoaderCircle, Mic, RotateCcw, TriangleAlert, Upload } from 'lucide-static';
+import { Check, CircleStop, LoaderCircle, Mic, RotateCcw, TriangleAlert, Upload, Video, VideoOff } from 'lucide-static';
 import { analyse, encodeWav, mixToMono, normalisePeak, TAKE_SAMPLE_RATE, trimSilence } from './audio';
 import { openScriptEditor, scriptEditorView } from './script-editor';
 import { PencilLine } from 'lucide-static';
@@ -18,7 +18,28 @@ const st = {
   jobId: '', attempt: -1, loading: false, error: '', scenes: [] as Scene[], problems: {} as Record<string, string>,
   busy: {} as Record<string, Busy>, sceneError: {} as Record<string, string>, sceneWarning: {} as Record<string, string>, localUrl: {} as Record<string, string>,
   seconds: 0, active: '', submitting: false, submitted: false, formatLabel: '', editing: false,
+  /** Record the camera too: the face is shown in a circle in the corner of the video. Remembered on this device. */
+  camera: localStorage.getItem('rec-camera') === '1', localVideo: {} as Record<string, string>,
 };
+
+/** MP4 first: it's what Safari records, and what Chrome records where it can; the renderer reads it best. */
+const VIDEO_TYPES = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+const videoType = () => VIDEO_TYPES.find((t) => MediaRecorder.isTypeSupported?.(t)) ?? '';
+
+function toggleCamera() {
+  if (st.active) return;
+  st.camera = !st.camera;
+  localStorage.setItem('rec-camera', st.camera ? '1' : '0');
+  draw();
+}
+
+/** Shows the live camera in the recording card's preview circle once it's on the page. */
+function attachPreview() {
+  requestAnimationFrame(() => {
+    const el = document.getElementById('rec-preview') as HTMLVideoElement | null;
+    if (el && stream && el.srcObject !== stream) { el.srcObject = stream; el.play().catch(() => {}); }
+  });
+}
 let draw: () => void = () => {};
 export function initRecorder(d: () => void) { draw = d; }
 
@@ -54,7 +75,7 @@ export function syncRecorder(jobId: string, stage: string, attempt: number | und
 
 async function load(jobId: string, attempt: number) {
   stopRecorder();
-  if (jobId !== st.jobId) Object.assign(st, { localUrl: {}, sceneError: {}, sceneWarning: {}, busy: {} });
+  if (jobId !== st.jobId) Object.assign(st, { localUrl: {}, localVideo: {}, sceneError: {}, sceneWarning: {}, busy: {} });
   st.loading = true; st.error = ''; st.jobId = jobId; st.attempt = attempt; st.submitted = false; draw();
   try {
     const r: any = await explainer.narrationScript(jobId);
@@ -66,9 +87,9 @@ async function load(jobId: string, attempt: number) {
   st.loading = false; draw();
 }
 
-const micError = (e: any) => e?.name === 'NotAllowedError' ? 'Microphone access is blocked. Allow it in your browser settings, or upload a file instead.'
-  : e?.name === 'NotFoundError' ? 'No microphone found. Plug one in, or upload a file instead.'
-  : e?.name === 'NotReadableError' ? 'Another app is using the microphone. Close it and try again.'
+const micError = (e: any) => e?.name === 'NotAllowedError' ? `${st.camera ? 'Camera or microphone' : 'Microphone'} access is blocked. Allow it in your browser settings${st.camera ? ', turn the camera off' : ''}, or upload a file instead.`
+  : e?.name === 'NotFoundError' ? `No ${st.camera ? 'camera or microphone' : 'microphone'} found. Plug one in${st.camera ? ', turn the camera off' : ''}, or upload a file instead.`
+  : e?.name === 'NotReadableError' ? `Another app is using the ${st.camera ? 'camera or microphone' : 'microphone'}. Close it and try again.`
   : `Could not start recording (${e?.message ?? e}). You can upload a file instead.`;
 
 async function startRecording(sceneId: string) {
@@ -77,12 +98,16 @@ async function startRecording(sceneId: string) {
   if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') { st.sceneError[sceneId] = 'This browser cannot record. Upload a file instead.'; draw(); return; }
   try {
     // No browser processing: phone-call style filters make a voice sound thin and clipped.
-    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 },
+      video: st.camera ? { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 }, facingMode: 'user' } : false,
+    });
     beginTake(sceneId);
     st.active = sceneId; st.busy[sceneId] = 'recording';
     timer = setInterval(() => { st.seconds++; draw(); }, 1000);
     startMeter(stream);
     window.addEventListener('beforeunload', warnLeaving);
+    if (st.camera) attachPreview();
   } catch (e) {
     releaseMic();
     st.sceneError[sceneId] = micError(e);
@@ -92,13 +117,15 @@ async function startRecording(sceneId: string) {
 
 function beginTake(sceneId: string) {
   const chunks: Blob[] = [];
-  const take = new MediaRecorder(stream!);
+  const withVideo = stream!.getVideoTracks().length > 0;
+  const mimeType = withVideo ? videoType() : '';
+  const take = new MediaRecorder(stream!, withVideo ? { ...(mimeType ? { mimeType } : {}), videoBitsPerSecond: 2_500_000, audioBitsPerSecond: 192_000 } : undefined);
   take.ondataavailable = (ev) => { if (ev.data.size) chunks.push(ev.data); };
   take.onstop = () => {
-    const blob = new Blob(chunks, { type: take.mimeType || 'audio/webm' });
+    const blob = new Blob(chunks, { type: take.mimeType || (withVideo ? 'video/webm' : 'audio/webm') });
     releaseMic();
     st.active = '';
-    handleAudio(sceneId, blob);
+    handleAudio(sceneId, blob, withVideo);
   };
   take.start(1000);
   recorder = take;
@@ -141,7 +168,8 @@ function stopRecording() {
   }
 }
 
-async function handleAudio(sceneId: string, blob: Blob) {
+/** `video`: the file is also the camera recording of this take, to show in the corner of the video. */
+async function handleAudio(sceneId: string, blob: Blob, video = false) {
   st.busy[sceneId] = 'processing'; st.sceneError[sceneId] = ''; st.sceneWarning[sceneId] = ''; draw();
   try {
     if (blob.size > 300 * 1024 * 1024) throw new Error('That file is over 300 MB. Export just this scene\'s audio and upload that.');
@@ -150,16 +178,21 @@ async function handleAudio(sceneId: string, blob: Blob) {
     let decoded: AudioBuffer;
     try { decoded = await ctx.decodeAudioData(await blob.arrayBuffer()); } catch { throw new Error('This browser could not read that file. Try MP3, WAV or M4A.'); } finally { ctx.close().catch(() => {}); }
     const channels = Array.from({ length: decoded.numberOfChannels }, (_, i) => decoded.getChannelData(i));
-    const trimmed = trimSilence(mixToMono(channels));
+    const mono = mixToMono(channels);
+    const trimmed = trimSilence(mono);
+    // Where the kept audio starts within the recording: the video is uploaded whole, and the face follows the audio from there.
+    const cam = video ? { blob, offset: (trimmed.byteOffset - mono.byteOffset) / 4 / TAKE_SAMPLE_RATE, seconds: mono.length / TAKE_SAMPLE_RATE } : undefined;
     const check = analyse(trimmed);
     if (check.problem) throw new Error(check.problem);
     if (check.warning) st.sceneWarning[sceneId] = check.warning;
     const wav = encodeWav(normalisePeak(trimmed));
     st.busy[sceneId] = 'uploading'; draw();
-    await upload(sceneId, wav);
+    await upload(sceneId, wav, cam);
     const sc = st.scenes.find((x) => x.id === sceneId);
     if (st.localUrl[sceneId]) URL.revokeObjectURL(st.localUrl[sceneId]);
     st.localUrl[sceneId] = URL.createObjectURL(new Blob([wav.buffer as ArrayBuffer], { type: 'audio/wav' }));
+    if (st.localVideo[sceneId]) URL.revokeObjectURL(st.localVideo[sceneId]);
+    if (cam) st.localVideo[sceneId] = URL.createObjectURL(blob); else delete st.localVideo[sceneId];
     if (sc) sc.take = { url: st.localUrl[sceneId], seconds: Math.round(check.seconds * 10) / 10, at: new Date().toISOString() };
     delete st.problems[sceneId];
   } catch (e: any) {
@@ -169,11 +202,17 @@ async function handleAudio(sceneId: string, blob: Blob) {
   draw();
 }
 
-async function upload(sceneId: string, wav: Uint8Array) {
+async function upload(sceneId: string, wav: Uint8Array, cam?: { blob: Blob; offset: number; seconds: number }) {
   let last: unknown;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const { url } = (await explainer.narrationUploadUrl({ jobId: st.jobId, sceneId })) as { url: string };
+      const video = cam ? { type: cam.blob.type, offset: Math.round(cam.offset * 1000) / 1000, seconds: Math.round(cam.seconds * 1000) / 1000 } : undefined;
+      const { url, videoUrl, videoContentType } = (await explainer.narrationUploadUrl({ jobId: st.jobId, sceneId, video })) as { url: string; videoUrl?: string; videoContentType?: string };
+      // Video first: the take counts once its audio is saved, so by then the face is there too.
+      if (cam && videoUrl) {
+        const v = await fetch(videoUrl, { method: 'PUT', headers: { 'Content-Type': videoContentType! }, body: cam.blob });
+        if (!v.ok) throw new Error(`Video upload failed (${v.status})`);
+      }
       const res = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'audio/wav' }, body: new Blob([wav.buffer as ArrayBuffer], { type: 'audio/wav' }) });
       if (!res.ok) throw new Error(`Upload failed (${res.status})`);
       return;
@@ -189,7 +228,8 @@ function pickFile(sceneId: string) {
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'audio/*,video/mp4,.m4a,.mp3,.wav,.aac,.ogg,.flac';
-  input.onchange = () => { const f = input.files?.[0]; if (f) handleAudio(sceneId, f); };
+  // With the camera on, a video file (say, filmed on a phone) is used for the face as well as the voice.
+  input.onchange = () => { const f = input.files?.[0]; if (f) handleAudio(sceneId, f, st.camera && /^video\/(mp4|webm|quicktime)/.test(f.type)); };
   input.click();
 }
 
@@ -226,6 +266,7 @@ function sceneCard(sc: Scene, i: number) {
       ${st.sceneWarning[sc.id] ? html`<div class="flex gap-2 text-sm text-amber-200">${icon(TriangleAlert, 'w-4 h-4 mt-0.5')}<span>${st.sceneWarning[sc.id]}</span></div>` : nothing}
       ${busy === 'recording' ? html`
         <div class="flex flex-wrap items-center gap-3">
+          ${stream?.getVideoTracks().length ? html`<video id="rec-preview" class="w-24 h-24 rounded-full object-cover border-2 border-amber-300 -scale-x-100 bg-black" muted playsinline autoplay></video>` : nothing}
           <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
           <span class="font-mono text-sm tabular-nums text-white">${fmt(st.seconds)}</span>
           <div class="flex-1 min-w-[120px] h-2 rounded-full bg-zinc-800 overflow-hidden"><div id="rec-level" class="h-2 rounded-full bg-emerald-400" style="width:0%"></div></div>
@@ -238,7 +279,9 @@ function sceneCard(sc: Scene, i: number) {
           ${busy ? html`<span class="${btn} text-zinc-300">${icon(LoaderCircle, 'w-4 h-4 animate-spin')} ${busy === 'uploading' ? 'Saving your take…' : 'Preparing audio…'}</span>` : html`
             <button type="button" class="${btn} ${sc.take ? 'border border-zinc-700 text-zinc-200 hover:border-zinc-500' : 'bg-white text-black hover:bg-zinc-200 font-semibold'}" ?disabled=${anotherActive || st.submitted} @click=${() => startRecording(sc.id)}>${icon(sc.take ? RotateCcw : Mic)} ${sc.take ? 'Retake' : 'Record'}</button>
             <button type="button" class="${btn} text-zinc-400 hover:text-white" ?disabled=${anotherActive || st.submitted} @click=${() => pickFile(sc.id)}>${icon(Upload)} Upload file</button>`}
-          ${sc.take && !busy ? html` <audio class="sm:ml-auto h-10 sm:h-9 sm:max-w-[280px] w-full" controls preload="none" src=${st.localUrl[sc.id] ?? sc.take.url}></audio>` : nothing}
+          ${sc.take && !busy ? (st.localVideo[sc.id]
+            ? html`<video class="sm:ml-auto w-full sm:w-[220px] rounded-xl bg-black" controls preload="metadata" playsinline src=${st.localVideo[sc.id]}></video>`
+            : html` <audio class="sm:ml-auto h-10 sm:h-9 sm:max-w-[280px] w-full" controls preload="none" src=${st.localUrl[sc.id] ?? sc.take.url}></audio>`) : nothing}
         </div>`}
     </article>`;
 }
@@ -267,10 +310,15 @@ export function recorderView() {
         <div class="space-y-1">
           <h2 class="text-lg font-semibold tracking-tight text-white">Your turn: record the narration</h2>
           <p class="text-sm text-zinc-400 max-w-[60ch]">Read each scene in your natural voice. Made a mistake? Don't stop. Re-read the sentence and carry on, and the mistake is cut when you finish. Small changes in wording are fine, and animations follow your pace. Every take saves right away, so you can close this and return later.</p>
+          ${st.camera ? html`<p class="text-sm text-amber-200/90 max-w-[60ch]">Camera on: your face appears in a circle in the corner of the video. Scroll so the scene you're reading sits just under your webcam, so you look at the viewer.</p>` : nothing}
         </div>
         <div class="text-right space-y-1.5">
-          <button type="button" class="rounded-xl text-sm px-3 py-2 inline-flex items-center gap-2 border border-zinc-700 text-zinc-200 hover:border-zinc-500 transition disabled:opacity-40 disabled:cursor-not-allowed"
-            ?disabled=${anyBusy || st.submitting} title="Change the words before you record" @click=${editScript}>${icon(PencilLine)} Edit script</button>
+          <div class="flex flex-wrap justify-end gap-2">
+            <button type="button" class="rounded-xl text-sm px-3 py-2 inline-flex items-center gap-2 border transition disabled:opacity-40 disabled:cursor-not-allowed ${st.camera ? 'border-amber-300/70 text-amber-200 bg-amber-300/10' : 'border-zinc-700 text-zinc-200 hover:border-zinc-500'}"
+              ?disabled=${!!st.active} aria-pressed=${st.camera} title="Record your face too. It's shown in a circle in the corner of the video." @click=${toggleCamera}>${icon(st.camera ? Video : VideoOff)} Camera ${st.camera ? 'on' : 'off'}</button>
+            <button type="button" class="rounded-xl text-sm px-3 py-2 inline-flex items-center gap-2 border border-zinc-700 text-zinc-200 hover:border-zinc-500 transition disabled:opacity-40 disabled:cursor-not-allowed"
+              ?disabled=${anyBusy || st.submitting} title="Change the words before you record" @click=${editScript}>${icon(PencilLine)} Edit script</button>
+          </div>
           <div class="font-mono text-sm tabular-nums text-white">${done}/${total} scenes</div>
           ${seconds ? html`<div class="text-[11px] font-mono text-zinc-500">${fmt(seconds)} recorded</div>` : nothing}
         </div>

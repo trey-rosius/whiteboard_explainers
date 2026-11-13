@@ -13,6 +13,7 @@ import { ElementBody, MarkBadge, PAD, StrikeLine } from './elements';
 import { P, Strokes, roughPath } from './sketch';
 import { Background } from './backgrounds';
 import { TitleDesign } from './titlecards';
+import { Captions } from './captions';
 import { clamp01, easeInOutCubic, easeOutCubic, fontVars, fonts, lerp, mixHex, prog, sp } from './anim';
 
 const FormatContext = createContext<Format>('16:9');
@@ -501,35 +502,3 @@ const Heading: React.FC<{ plan: RenderPlan; scene: PlanScene; frame: number; the
   );
 };
 
-const Captions: React.FC<{ plan: RenderPlan; scene: PlanScene; frame: number; theme: Theme }> = ({ plan, scene, frame, theme }) => {
-  const chunk = scene.captions.find((c) => frame >= c.startFrame && frame < c.endFrame);
-  if (!chunk) return null;
-  const C = CAPTION[plan.format];
-  const a = easeOutCubic(prog(frame, chunk.startFrame, 4));
-  if (plan.captions === 'karaoke') {
-    return (
-      <div style={{ position: 'absolute', left: (plan.width - C.maxW) / 2, width: C.maxW, top: C.y - 60, textAlign: 'center', opacity: a }}>
-        {chunk.words.map((w, i) => {
-          const active = frame >= w.startFrame && frame < Math.max(w.endFrame, w.startFrame + 4);
-          const said = frame >= w.startFrame;
-          return (
-            <span key={i} style={{ display: 'inline-block', margin: '0 10px', fontFamily: fonts.display, fontWeight: 700, fontSize: 64, color: active ? theme.captionHot : said ? theme.captionText : theme.captionDim, transform: `scale(${active ? 1.08 : 1})`, textShadow: theme.dark ? '0 4px 0 rgba(0,0,0,0.55), 0 0 18px rgba(0,0,0,0.6)' : `0 0 3px ${theme.captionHalo}, 0 0 14px ${theme.captionHalo}, 0 0 26px ${theme.captionHalo}` }}>
-              {w.text}
-            </span>
-          );
-        })}
-      </div>
-    );
-  }
-  return (
-    <div style={{ position: 'absolute', left: 0, width: plan.width, top: C.y - 26, display: 'flex', justifyContent: 'center', opacity: a }}>
-      <div style={{ maxWidth: C.maxW, padding: '8px 22px', borderRadius: 14, background: theme.captionBg, fontFamily: fonts.hand, fontSize: 42, lineHeight: 1.25, textAlign: 'center' }}>
-        {chunk.words.map((w, i) => (
-          <span key={i} style={{ color: frame >= w.startFrame ? '#F4F1EA' : 'rgba(244,241,234,0.55)' }}>
-            {w.text}{i < chunk.words.length - 1 ? ' ' : ''}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-};

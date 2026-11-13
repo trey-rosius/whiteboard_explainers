@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AbsoluteFill, Audio, Composition, Sequence, Series, staticFile, useCurrentFrame } from 'remotion';
 import type { PlanScene, RenderPlan } from '../engine/plan';
 import { SceneView } from './SceneView';
+import { Presenter } from './presenter';
 import { continueRender, delayRender } from 'remotion';
 import { BrandEndCard } from './endcard';
 import { fontVars, fonts, loadThemeFonts } from './anim';
@@ -10,11 +11,13 @@ import fallbackPlan from './defaultPlan.json';
 
 const src = (s: string) => (/^https?:\/\//.test(s) ? s : staticFile(s));
 
-const SceneSeq: React.FC<{ plan: RenderPlan; scene: PlanScene }> = ({ plan, scene }) => {
+const SceneSeq: React.FC<{ plan: RenderPlan; scene: PlanScene; prev?: PlanScene; next?: PlanScene }> = ({ plan, scene, prev, next }) => {
   const frame = useCurrentFrame();
   return (
     <>
       <SceneView plan={plan} scene={scene} frame={frame} />
+      {/* The face circle carries on from scene to scene; it only grows in or out where the scene before or after has none. */}
+      <Presenter plan={plan} scene={scene} frame={frame} theme={THEMES[plan.theme]} enter={!prev?.presenter} exit={!next?.presenter} />
       {scene.audio ? (
         <Sequence from={scene.audio.startFrame} layout="none">
           <Audio src={src(scene.audio.src)} />
@@ -58,9 +61,9 @@ export const ExplainerVideo: React.FC<{ plan: RenderPlan }> = ({ plan }) => {
   return (
     <AbsoluteFill style={{ background: THEMES[plan.theme].bg }}>
       <Series>
-        {plan.scenes.map((sc) => (
+        {plan.scenes.map((sc, i) => (
           <Series.Sequence key={sc.id} durationInFrames={sc.durationInFrames}>
-            <SceneSeq plan={plan} scene={sc} />
+            <SceneSeq plan={plan} scene={sc} prev={plan.scenes[i - 1]} next={plan.scenes[i + 1]} />
           </Series.Sequence>
         ))}
         {plan.brandKit && plan.endFrames ? (

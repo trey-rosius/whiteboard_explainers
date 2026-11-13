@@ -28,6 +28,15 @@ export const CAPTION: Record<Format, { y: number; maxW: number }> = {
   '9:16': { y: 1690, maxW: 920 },
 };
 
+/**
+ * The narrator's face, in a circle in the bottom-right corner. When a video has one, the board keeps `clear` empty:
+ * the circle sits there, a little inside the board's corner, so diagrams and labels never go behind it.
+ */
+export const PRESENTER: Record<Format, { cx: number; cy: number; r: number; clear: Rect }> = {
+  '16:9': { cx: 1760, cy: 910, r: 120, clear: { x: 1620, y: 770, w: 300, h: 310 } },
+  '9:16': { cx: 900, cy: 1440, r: 140, clear: { x: 740, y: 1280, w: 340, h: 320 } },
+};
+
 /** Element scale per format; the board is narrow on 9:16, but the screen is what the viewer holds. */
 export const FORMAT_SCALE: Record<Format, number> = { '16:9': 1, '9:16': 1.3 };
 

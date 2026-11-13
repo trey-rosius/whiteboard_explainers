@@ -49,6 +49,8 @@ export const fontVars = (theme: Theme): React.CSSProperties => ({
 export const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 export const easeOutCubic = (t: number) => 1 - Math.pow(1 - clamp01(t), 3);
+/** Overshoots a little before settling: a bounce-in. */
+export const easeOutBack = (t: number) => { const c = 1.70158; const x = clamp01(t) - 1; return 1 + (c + 1) * x * x * x + c * x * x; };
 export const easeInOutCubic = (t: number) => {
   t = clamp01(t);
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;

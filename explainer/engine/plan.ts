@@ -2,6 +2,7 @@
  * RenderPlan — the compiled, fully-resolved output of the engine. The renderer consumes ONLY this.
  * Plus `foldScene`: a pure function giving the discrete state of every element at any frame.
  */
+import type { CaptionStyle } from './captions';
 import type { TitleStyle } from './title';
 import type { Element, PlacedElement, Step } from './schema';
 import type { Format, Pt } from './layout';
@@ -48,7 +49,8 @@ export type PlanAction = Step & {
   until?: number;
 };
 
-export interface CaptionWord { text: string; startFrame: number; endFrame: number }
+/** `key`: a number or name the caption makes stand out. */
+export interface CaptionWord { text: string; startFrame: number; endFrame: number; key?: boolean }
 export interface CaptionChunk { startFrame: number; endFrame: number; words: CaptionWord[] }
 
 export interface PlanScene {
@@ -61,6 +63,8 @@ export interface PlanScene {
   heading?: string;
   headingStatic: boolean;
   audio?: { src: string; startFrame: number };
+  /** The narrator's face for this scene: video stretches (seconds) played back to back from `startFrame`, in step with `audio`. */
+  presenter?: { src: string; startFrame: number; segments: Array<{ from: number; to: number }>; seconds: number };
   narrationStart: number;
   narrationEnd: number;
   words: CaptionWord[];
@@ -83,9 +87,11 @@ export interface RenderPlan {
   height: number;
   fps: number;
   theme: ThemeName;
-  captions: 'off' | 'subtle' | 'karaoke';
+  captions: CaptionStyle;
   brand?: string;
   brandKit?: { logo: string; mark: string; url: string; line?: string };
+  /** The board keeps the bottom-right corner clear for the narrator's face. */
+  presenter?: boolean;
   /** Frames of the closing card after the last scene (included in totalFrames). */
   endFrames?: number;
   music?: { src: string; volume: number };

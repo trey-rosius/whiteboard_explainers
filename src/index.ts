@@ -8,6 +8,7 @@
 import './styles.css';
 import { explainer } from 'aws-blocks';
 import { THEME_IDS, THEME_META } from '../explainer/engine/theme-list';
+import { CAPTION_META, CAPTION_STYLES, captionFit, type CaptionChoice } from '../explainer/engine/caption-list';
 import { isSignedOutError, requireSignIn, signOut } from './signin';
 import { initRecorder, recorderView, stopRecorder, syncRecorder } from './recorder';
 import { attentionCount, calendarView, initCalendar, leaveCalendar, refreshAttention, syncCalendarRoute } from './calendar';
@@ -65,7 +66,7 @@ const STAGE_LABEL: Record<string, string> = {
 
 /** 9:16 "60s" aims at 55 s of narration so the ±10% length check keeps the short at or under a minute. */
 const SHORT_MIN = 0.92;
-const composer = { mode: 'single' as 'single' | 'batch', topic: '', topics: '', brief: '', showBrief: false, minutes: 2, format: '16:9' as Format, theme: 'auto', voiceId: '' };
+const composer = { mode: 'single' as 'single' | 'batch', topic: '', topics: '', brief: '', showBrief: false, minutes: 2, format: '16:9' as Format, theme: 'auto', captions: 'auto' as CaptionChoice, voiceId: '' };
 /** Batch lines as the server will see them: "topic | notes", bullets stripped, blanks and duplicates dropped. */
 const batchLines = () => {
   const seen = new Set<string>();
@@ -179,7 +180,7 @@ async function submit(e: Event) {
   const requestId = newRequestId();
   try {
     const self = composer.voiceId === 'self';
-    const shared = { brief: composer.brief.trim() || undefined, minutes: composer.minutes, format: composer.format, theme: composer.theme as any, voiceId: self ? undefined : composer.voiceId || undefined, narration: self ? 'self' as const : undefined, requestId };
+    const shared = { brief: composer.brief.trim() || undefined, minutes: composer.minutes, format: composer.format, theme: composer.theme as any, captions: composer.captions, voiceId: self ? undefined : composer.voiceId || undefined, narration: self ? 'self' as const : undefined, requestId };
     if (composer.mode === 'batch') {
       const r: any = await explainer.startBatch({ topics: batchTopics(), ...shared });
       const notes = [`Queued ${r.jobIds.length - (r.reused ?? 0)} video${r.jobIds.length === 1 ? '' : 's'}`];
@@ -384,6 +385,52 @@ function libraryView() {
   `;
 }
 
+/** A tiny sample of each caption style, drawn over the chosen background so you can see how it reads. */
+function captionSample(style: string, bg: string) {
+  const gold = '#FFD23F';
+  const base = 'position:absolute;left:0;right:0;bottom:8px;display:flex;justify-content:center;font-weight:700;font-size:12px;line-height:1;white-space:nowrap';
+  const outline = 'text-shadow:-1.5px -1.5px 0 #000,1.5px -1.5px 0 #000,-1.5px 1.5px 0 #000,1.5px 1.5px 0 #000,0 2px 0 #000';
+  const halo = 'text-shadow:0 0 3px rgba(0,0,0,.55),0 0 8px rgba(0,0,0,.45)';
+  const sample = {
+    pop: html`<span style="${base};font-size:15px;color:#fff;${outline}">costs <span style="color:${gold};margin-left:4px;display:inline-block;transform:rotate(-3deg)">$500</span></span>`,
+    highlight: html`<span style="${base};color:#fff;${halo}">it costs <span style="color:${gold};margin-left:3px;border-bottom:2px solid ${gold}">$500</span></span>`,
+    marker: html`<span style="${base};color:#fff;${halo}">it costs <span style="margin-left:3px;background:#FFE45C;color:#16130E;padding:0 3px;border-radius:2px;transform:rotate(-2deg);display:inline-block;text-shadow:none">$500</span></span>`,
+    lowerthird: html`<span style="${base};justify-content:flex-start;left:6px"><span style="background:rgba(12,12,16,.85);border-left:3px solid ${gold};color:#f5f5f5;padding:3px 6px;border-radius:0 3px 3px 0;font-size:11px">it costs <span style="color:${gold}">$500</span></span></span>`,
+    karaoke: html`<span style="${base};font-size:14px;color:#fff;${halo}">it <span style="color:#67E8F9;margin:0 3px">costs</span> $500</span>`,
+    subtle: html`<span style="${base}"><span style="background:rgba(0,0,0,.6);color:#F4F1EA;padding:3px 7px;border-radius:6px;font-weight:500;font-size:11px">it costs $500</span></span>`,
+    off: html`<span style="${base};color:rgba(255,255,255,.5);font-weight:500">no captions</span>`,
+  } as Record<string, unknown>;
+  return html`<span class="block h-14 relative overflow-hidden" style="background:${bg}">${sample[style]}</span>`;
+}
+
+function captionPicker() {
+  const theme = composer.theme as any;
+  const bg = composer.theme === 'auto' ? 'radial-gradient(circle at 50% 45%,#2a2f3d,#11141c)' : THEME_META[composer.theme as keyof typeof THEME_META].preview;
+  const badge = (fit: string) => fit === 'best' ? html`<span class="text-emerald-300">Best</span>` : fit === 'avoid' ? html`<span class="text-rose-300">Hard to read</span>` : nothing;
+  const tile = (id: CaptionChoice) => {
+    const f = id === 'auto' ? null : captionFit(id, theme, composer.format);
+    const title = id === 'auto' ? 'Picks a style that reads best on this background, and varies it between videos' : `${CAPTION_META[id].look}. ${f!.why}`;
+    return html`
+      <button type="button" aria-pressed=${composer.captions === id} title=${title} @click=${() => { composer.captions = id; draw(); }}
+        class="shrink-0 w-[104px] rounded-xl border overflow-hidden text-left transition ${composer.captions === id ? 'border-white ring-1 ring-white' : f?.fit === 'avoid' ? 'border-rose-900/60 opacity-70 hover:opacity-100' : 'border-zinc-800 hover:border-zinc-600'}">
+        ${id === 'auto' ? html`<span class="block h-14 relative" style="background:${bg}"><span class="absolute inset-0 flex items-center justify-center text-[12px] font-semibold text-white/90">Auto</span></span>` : captionSample(id, bg)}
+        <span class="flex items-center justify-between gap-1 px-2 py-1.5 text-[11px] bg-black"><span class="text-zinc-300 truncate">${id === 'auto' ? 'Auto' : CAPTION_META[id].name}</span>${f ? html`<span class="text-[10px] shrink-0">${badge(f.fit)}</span>` : nothing}</span>
+      </button>`;
+  };
+  const order = ([...CAPTION_STYLES] as CaptionChoice[]).filter((s) => s !== 'off');
+  // Best first for this background, then the rest, hard-to-read last.
+  const rank = (s: CaptionChoice) => { const fit = captionFit(s as any, theme, composer.format).fit; return fit === 'best' ? 0 : fit === 'good' ? 1 : 2; };
+  const sorted = [...order].sort((a, b) => rank(a) - rank(b));
+  const chosen = composer.captions === 'auto' ? null : captionFit(composer.captions, theme, composer.format);
+  return html`
+    <div class="flex gap-2 overflow-x-auto scrollbar-thin pb-1" role="group" aria-label="Caption style">
+      ${tile('auto')}${sorted.map(tile)}${tile('off')}
+    </div>
+    <p class="text-[11px] ${chosen?.fit === 'avoid' ? 'text-rose-300' : 'text-zinc-500'}">${composer.captions === 'auto'
+      ? composer.theme === 'auto' ? 'Auto picks a style that reads well on whichever background the video gets.' : `Auto picks one of: ${sorted.filter((s) => rank(s) === 0).map((s) => CAPTION_META[s as keyof typeof CAPTION_META].name).join(', ')}.`
+      : `${CAPTION_META[composer.captions].look}. ${chosen!.why}`}</p>`;
+}
+
 function themePicker() {
   const tile = (id: string, name: string, vibe: string, preview: string, ink: string, accent: string) => html`
     <button type="button" aria-pressed=${composer.theme === id} title=${vibe} @click=${() => { composer.theme = id; draw(); }}
@@ -455,6 +502,10 @@ function composerCard() {
       <div class="space-y-1.5">
         <div class="text-[11px] font-mono uppercase tracking-wider text-zinc-500">Theme · <span class="normal-case tracking-normal text-zinc-300">${composer.theme === 'auto' ? 'Auto' : THEME_META[composer.theme as keyof typeof THEME_META].name}</span></div>
         ${themePicker()}
+      </div>
+      <div class="space-y-1.5">
+        <div class="text-[11px] font-mono uppercase tracking-wider text-zinc-500">Captions · <span class="normal-case tracking-normal text-zinc-300">${composer.captions === 'auto' ? 'Auto' : CAPTION_META[composer.captions].name}</span>${composer.theme === 'auto' ? nothing : html` <span class="normal-case tracking-normal text-zinc-600">· rated for ${THEME_META[composer.theme as keyof typeof THEME_META].name}, ${composer.format === '9:16' ? 'Shorts' : 'landscape'}</span>`}</div>
+        ${captionPicker()}
       </div>
       <div class="flex justify-end">
         <button class="w-full sm:w-auto rounded-xl bg-white text-black text-sm font-semibold px-6 py-3 sm:py-2.5 hover:bg-zinc-200 active:scale-[0.98] transition disabled:opacity-40 disabled:cursor-not-allowed"

@@ -5,7 +5,7 @@
 import type { ZodIssue } from 'zod';
 import { VideoSpec } from './schema';
 import { compile, isPlaced, parseAt, type CompileOptions } from './compile';
-import { CONTENT, arrowEnd, arrowGeometry, footprint, groupRect, inset, intersection, quadPoint, type Format, type Rect, arrowLabelRect, arrowLabelSide } from './layout';
+import { CONTENT, PRESENTER, arrowEnd, arrowGeometry, footprint, groupRect, inset, intersection, quadPoint, type Format, type Rect, arrowLabelRect, arrowLabelSide } from './layout';
 import { effectiveSpec, foldScene, type Issue, type PlanScene, type RenderPlan } from './plan';
 import { findSpokenLists, screenWords } from './spoken-lists';
 import { findKeyFigures, findMovements } from './emphasis';
@@ -39,7 +39,7 @@ export function validate(raw: unknown, opts: CompileOptions = {}): ValidationRes
   cutText(spec, issues);
   spec.scenes.forEach((sc, si) => {
     const ps = plan.scenes[si];
-    if (sc.kind === 'board' && ps) sceneChecks(sc, ps, format, plan.fps, issues, si === spec.scenes.length - 1, spec.scenes.slice(0, si).some((x) => x.kind === 'board'));
+    if (sc.kind === 'board' && ps) sceneChecks(sc, ps, format, plan.fps, issues, si === spec.scenes.length - 1, spec.scenes.slice(0, si).some((x) => x.kind === 'board'), !!spec.presenter);
     if (sc.kind === 'title' && ps && ps.durationInFrames / plan.fps > TITLE_MAX_SECONDS) {
       issues.push({ level: 'warn', code: 'TITLE_LONG', where: `scene "${sc.id}"`, scene: sc.id, message: `The title screen holds for ${(ps.durationInFrames / plan.fps).toFixed(1)}s (keep it under ${TITLE_MAX_SECONDS}s).`, fix: 'Say the title, then one hook of 12 words at most. Move the rest into the first board.' });
     }
@@ -212,7 +212,7 @@ function gridSpan(b: Rect): string {
   return `x ${gx(b.x)}–${gx(b.x + b.w)}, y ${gy(b.y)}–${gy(b.y + b.h)}`;
 }
 
-function sceneChecks(sc: Extract<VideoSpec['scenes'][number], { kind: 'board' }>, ps: PlanScene, format: Format, fps: number, issues: Issue[], isLastScene = false, afterBoard = false) {
+function sceneChecks(sc: Extract<VideoSpec['scenes'][number], { kind: 'board' }>, ps: PlanScene, format: Format, fps: number, issues: Issue[], isLastScene = false, afterBoard = false, presenter = false) {
   const where = `scene "${sc.id}"`;
   gridFormat = format;
   const content = CONTENT[format];
@@ -243,6 +243,9 @@ function sceneChecks(sc: Extract<VideoSpec['scenes'][number], { kind: 'board' }>
       if (g.box.x < bounds.x || g.box.y < bounds.y || g.box.x + g.box.w > bounds.x + bounds.w || g.box.y + g.box.h > bounds.y + bounds.h) {
         const side = g.box.x < bounds.x ? 'left' : g.box.x + g.box.w > bounds.x + bounds.w ? 'right' : g.box.y < bounds.y ? 'top' : 'bottom';
         issues.push({ level: 'error', code: 'OUT_OF_BOUNDS', where: `${where} element "${el.id}"`, scene: sc.id, ids: [el.id], message: `"${el.id}" spills off the ${side} of the safe area (it spans ${gridSpan(g.box)}; the board is x 0–${content.cols}, y 0–${content.rows}).`, fix: `Move it toward the centre (grid centre is [${content.cols / 2}, ${content.rows / 2}]), use size "s", or shorten its text.` });
+      } else if (presenter && intersection(g.box, PRESENTER[format].clear) > 0) {
+        // Same code as spilling off the board, so the auto-layout moves it out of the corner too.
+        issues.push({ level: 'error', code: 'OUT_OF_BOUNDS', where: `${where} element "${el.id}"`, scene: sc.id, ids: [el.id], message: `"${el.id}" (spans ${gridSpan(g.box)}) is in the bottom-right corner, where the narrator's face is shown (${gridSpan(PRESENTER[format].clear)}).`, fix: `Move it left or up, out of that corner, or use size "s".` });
       }
     }
     // Words alone only work as one big line. Several lines, or a small label, on an empty board reads as unfinished.

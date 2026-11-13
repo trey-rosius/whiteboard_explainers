@@ -355,6 +355,23 @@ export function pcm16Wav(samples: Int16Array, rate: number): Uint8Array {
 }
 
 /** Removes time ranges from a mono 16-bit PCM WAV, with short fades so the joins don't click. */
+/**
+ * The stretches of a take that survive the cuts, in take seconds, in order. The narrator's video plays exactly these,
+ * so their face stays in step with the edited audio.
+ */
+export function keptSegments(cuts: Array<{ from: number; to: number }>, durationSec: number): Array<{ from: number; to: number }> {
+  const out: Array<{ from: number; to: number }> = [];
+  let at = 0;
+  for (const c of [...cuts].sort((x, y) => x.from - y.from)) {
+    const a = Math.max(at, Math.min(durationSec, c.from));
+    const z = Math.max(a, Math.min(durationSec, c.to));
+    if (a > at) out.push({ from: at, to: a });
+    at = z;
+  }
+  if (at < durationSec) out.push({ from: at, to: durationSec });
+  return out;
+}
+
 export function cutWav(b: Uint8Array, cuts: Array<{ from: number; to: number }>): Uint8Array {
   const { rate, samples } = readPcm16(b);
   const total = samples.length;

@@ -21,11 +21,13 @@ import { SSMClient, GetParametersCommand } from '@aws-sdk/client-ssm';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { ApiError } from '@aws-blocks/core';
 import { THEME_IDS, isThemeName, type ThemeChoice } from '../explainer/engine/theme-list';
+import { CAPTION_STYLES, isCaptionStyle, type CaptionChoice } from '../explainer/engine/caption-list';
 import { applyScriptEdits, editableScenes, type SceneEdit } from '../explainer/engine/script-edit';
 import { validate } from '../explainer/engine/validate';
 import { parseNarration } from '../explainer/engine/narration';
 
 const cleanTheme = (v: unknown): ThemeChoice => (isThemeName(v) ? v : 'auto');
+const cleanCaptions = (v: unknown): CaptionChoice => (isCaptionStyle(v) ? v : 'auto');
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const scope = new Scope('video');
@@ -64,6 +66,8 @@ export const ExplainerJobSchema = z.object({
   minutes: z.number(),
   format: z.enum(['16:9', '9:16']),
   theme: z.enum([...THEME_IDS, 'auto']),
+  /** Caption design; absent or 'auto' lets the harness pick one that reads well on the background. */
+  captions: z.enum([...CAPTION_STYLES, 'auto']).optional(),
   voiceName: z.string().optional(),
   voiceId: z.string().optional(),
   brief: z.string().optional(),
@@ -419,7 +423,7 @@ export const explainerDispatch = new AsyncJob(scope, 'explainer-dispatch', {
         InvocationType: 'Event',
         DurableExecutionName: job.jobId, // idempotent: a duplicate start is rejected by Lambda
         Payload: new TextEncoder().encode(JSON.stringify({
-          topic: job.topic, brief: job.brief, minutes: job.minutes, format: job.format, theme: job.theme, voiceId: job.voiceId, episodeId: job.jobId, narration: job.narration, resumeFrom: job.resumeFrom, recentThemes: await recentThemes(),
+          topic: job.topic, brief: job.brief, minutes: job.minutes, format: job.format, theme: job.theme, captions: job.captions, voiceId: job.voiceId, episodeId: job.jobId, narration: job.narration, resumeFrom: job.resumeFrom, recentThemes: await recentThemes(),
         })),
       }));
       if (res.DurableExecutionArn) await setState(job.jobId, 'running', { executionArn: res.DurableExecutionArn });
@@ -439,7 +443,7 @@ export const explainerDispatch = new AsyncJob(scope, 'explainer-dispatch', {
 const userError = (message: string, status = 400) => new ApiError(message, status);
 
 type StartInput = {
-  topic: string; minutes?: number; format?: '16:9' | '9:16'; theme?: ThemeChoice; brief?: string; voiceId?: string;
+  topic: string; minutes?: number; format?: '16:9' | '9:16'; theme?: ThemeChoice; captions?: CaptionChoice; brief?: string; voiceId?: string;
   /** "self" = the user records the narration; the pipeline pauses for it after the script is ready. */
   narration?: 'self';
   /** Client-generated id per submit click: repeating it returns the same job instead of creating another. */
@@ -505,6 +509,7 @@ async function createJobs(inputs: Array<StartInput & { retryOf?: string; batchId
       jobId: requestId ? requestJobId(requestId) : `ex-${at.getTime().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
       topic, minutes, format,
       theme: cleanTheme(input.theme),
+      captions: cleanCaptions(input.captions),
       voiceName: narration ? 'Your voice' : voice?.name, voiceId: voice?.id, narration, resumeFrom: input.resumeFrom,
       brief: cleanBrief(input.brief),
       batchId: input.batchId ?? batchId, retryOf: input.retryOf, requestId,
@@ -638,7 +643,7 @@ export const explainer = new ApiNamespace(scope, 'explainer', (context) => locke
     if (job.state !== 'failed' && job.state !== 'cancelled') throw userError('Only failed or cancelled videos can be retried.');
     if (job.errorKind === 'rejected') throw userError('This topic was rejected by the research agent — rephrase it and start a new video.');
     const [fresh] = await createJobs([{
-      topic: job.topic, brief: job.brief, minutes: job.minutes, format: job.format, theme: job.theme, voiceId: job.voiceId,
+      topic: job.topic, brief: job.brief, minutes: job.minutes, format: job.format, theme: job.theme, captions: job.captions, voiceId: job.voiceId,
       requestId: `retry:${job.jobId}${job.retryRound ? `:${job.retryRound}` : ''}`, retryOf: job.jobId, batchId: job.batchId, narration: job.narration, resumeFrom: job.narration ? job.jobId : undefined,
     }]);
     await explainerJobsTable.put({ ...job, retriedAs: fresh.jobId });
@@ -766,8 +771,11 @@ export const explainer = new ApiNamespace(scope, 'explainer', (context) => locke
     return { ok: true, saved: true, problems: [], warnings, seconds, rerecord };
   },
 
-  /** Short-lived upload link for one scene's take (a 16-bit PCM WAV prepared in the browser). */
-  async narrationUploadUrl(input: { jobId: string; sceneId: string }) {
+  /**
+   * Short-lived upload link for one scene's take (a 16-bit PCM WAV prepared in the browser). With `video`, also a link for
+   * the camera recording of the same take, and a note of where the trimmed audio starts in it, so the face can follow the audio.
+   */
+  async narrationUploadUrl(input: { jobId: string; sceneId: string; video?: { type: string; offset: number; seconds: number } }) {
     const job = await explainerJobsTable.get({ jobId: String(input?.jobId ?? '') });
     if (!job || job.narration !== 'self') throw userError('This video does not use your own narration.');
     if (TERMINAL.has(job.state ?? '')) throw userError('This video is already finished.');
@@ -776,7 +784,16 @@ export const explainer = new ApiNamespace(scope, 'explainer', (context) => locke
     const { bucket } = explainerResources();
     const key = `explainer/${job.jobId}/narration/${input.sceneId}/${Date.now().toString(36)}.wav`;
     const url = await getSignedUrl(uploadClient, new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: 'audio/wav' }), { expiresIn: 15 * 60 });
-    return { url, key };
+    const v = input.video;
+    if (!v) return { url, key };
+    const ext = ({ 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov' } as Record<string, string>)[String(v.type).split(';')[0]];
+    if (!ext) throw userError('That video format is not supported. Use MP4, WebM or MOV.');
+    const offset = Number(v.offset), seconds = Number(v.seconds);
+    if (!(offset >= 0 && seconds > offset && seconds <= 900)) throw userError('That video could not be read. Record it again.');
+    const videoKey = key.replace(/\.wav$/, `.presenter.${ext}`);
+    await writeBucketJson(key.replace(/\.wav$/, '.presenter.json'), { key: videoKey, offset, seconds });
+    const videoUrl = await getSignedUrl(uploadClient, new PutObjectCommand({ Bucket: bucket, Key: videoKey, ContentType: `video/${ext === 'mov' ? 'quicktime' : ext}` }), { expiresIn: 15 * 60 });
+    return { url, key, videoUrl, videoContentType: `video/${ext === 'mov' ? 'quicktime' : ext}` };
   },
 
   /** All scenes recorded: wake the pipeline. `force` accepts takes it flagged as not matching the script. */

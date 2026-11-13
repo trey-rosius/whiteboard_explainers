@@ -4,6 +4,7 @@
  * expands multi-target steps, schedules SFX and captions. Never throws on bad
  * references — it records Issues so the LLM gets precise, fixable feedback.
  */
+import { autoCaptionStyle, keyWords } from './captions';
 import { autoTitleStyle } from './title';
 import type { BoardScene, Element, PlacedElement, Step, VideoSpec } from './schema';
 import { CONTENT, FORMAT_SCALE, FRAME, gridToPx, ringPoint, ringRadius, type Format } from './layout';
@@ -28,7 +29,11 @@ export interface SceneTiming {
   words: WordTime[];
   /** Hash of the spoken text + voice settings; used to detect stale audio. */
   hash?: string;
+  /** The narrator's video of this take: the stretches of it that match the (edited) audio, in video seconds, and its full length. */
+  presenter?: PresenterVideo;
 }
+
+export interface PresenterVideo { src: string; segments: Array<{ from: number; to: number }>; seconds: number }
 
 export interface CompileOptions {
   fps?: number;
@@ -82,8 +87,10 @@ export function compile(spec: VideoSpec, opts: CompileOptions = {}): { plan: Ren
         dur = est.duration;
       }
     }
+    const keys = keyWords(parsed.tokens);
     const wordFrames = words.map((w, i) => ({
       text: parsed.tokens[i].display,
+      ...(keys[i] ? { key: true } : {}),
       startFrame: HEAD + Math.round(w.start * fps),
       endFrame: HEAD + Math.max(Math.round(w.start * fps) + 2, Math.round(w.end * fps)),
     }));
@@ -114,6 +121,7 @@ export function compile(spec: VideoSpec, opts: CompileOptions = {}): { plan: Ren
       fadeOut: !(next && next.kind === 'board' && next.continue),
       headingStatic: false,
       audio: t?.src && !estimated ? { src: t.src, startFrame: HEAD } : undefined,
+      presenter: t?.src && !estimated && t.presenter?.segments.length ? { ...t.presenter, startFrame: HEAD } : undefined,
       narrationStart: HEAD,
       narrationEnd,
       words: wordFrames,
@@ -416,9 +424,10 @@ export function compile(spec: VideoSpec, opts: CompileOptions = {}): { plan: Ren
     height: h,
     fps,
     theme: spec.theme,
-    captions: spec.captions ?? (format === '9:16' ? 'karaoke' : 'subtle'),
+    captions: spec.captions ?? autoCaptionStyle(spec.id, spec.theme, format),
     brand: spec.brand,
     brandKit: spec.brandKit,
+    presenter: spec.presenter,
     endFrames: spec.brandKit ? END_CARD_FRAMES : undefined,
     music: spec.music ? { src: spec.music.src, volume: spec.music.volume } : undefined,
     scenes,
